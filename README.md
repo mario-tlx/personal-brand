@@ -1,13 +1,13 @@
-# Personal Brand
+# mario.tlx.la
 
-A modern personal brand website built with Next.js, optimized for deployment on [Vercel](https://vercel.com).
+Personal site and portfolio for Mario Oviedo. One continuous scroll: a dot gains one dimension
+per scene (line → curve → plane → cube) and folds back into a dot at the contact card.
+See `CLAUDE.md` for the full brief.
 
 ## Stack
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS v4
-- Vercel-ready defaults (zero config deploy)
+Next.js (App Router) · TypeScript · Tailwind CSS v4 · GSAP ScrollTrigger · React Three Fiber · Lenis.
+Deployed on Vercel.
 
 ## Getting started
 
@@ -16,28 +16,17 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open http://localhost:3000. Add `?still` to preview the reduced-motion version.
 
-## Customize your content
+## Where things live
 
-Edit `lib/site-config.ts` to update:
-
-- Name, title, and bio
-- Email and social links
-- Highlights and featured projects
-- Site URL for SEO metadata
-
-## Deploy on Vercel
-
-1. Push this repo to GitHub.
-2. Import the repository in [Vercel](https://vercel.com/new).
-3. Deploy with default settings (framework preset: Next.js).
-
-Vercel will automatically detect the Next.js project and run `npm run build`.
+- `content/site.ts`: every word, number and link (English now; Spanish comes later).
+- `lib/journey.ts`: scene scroll ranges, scroll length and axis layout.
+- `components/journey/Journey.tsx`: the HTML layer and the master scroll timeline.
+- `components/journey/Stage.tsx`: the single fixed 3D canvas (the dot).
 
 ## Scripts
 
-- `npm run dev` — start local dev server
-- `npm run build` — production build
-- `npm run start` — run production server locally
-- `npm run lint` — lint the codebase
+- `npm run dev`: local dev server
+- `npm run build`: production build
+- `npm run lint`: ESLint
