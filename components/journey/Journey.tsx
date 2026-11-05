@@ -41,6 +41,10 @@ export function Journey({ content, today }: Props) {
   const motion = useSyncExternalStore(subscribeNoop, isMotionMode, () => false);
   const [canvasReady, setCanvasReady] = useState(false);
   const [introShown, setIntroShown] = useState(false);
+  const [openProject, setOpenProject] = useState<number | null>(null);
+  const anchors = useRef<(HTMLElement | null)[]>([]);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const lenisRef = useRef<Lenis | null>(null);
 
   const roleFracs = useMemo(() => content.roles.map((r) => yearToFrac(r.start, today)), [content.roles, today]);
   const eduFracs = useMemo(
@@ -72,9 +76,10 @@ export function Journey({ content, today }: Props) {
 
     gsap.registerPlugin(ScrollTrigger);
     ScrollTrigger.config({ ignoreMobileResize: true });
-    resetMotionState(content.roles.length, content.education.length, counters.length);
+    resetMotionState(content.roles.length, content.education.length, counters.length, content.projects.length);
 
     const lenis = new Lenis({ anchors: true });
+    lenisRef.current = lenis;
     lenis.on("scroll", ScrollTrigger.update);
     const raf = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(raf);
@@ -96,6 +101,7 @@ export function Journey({ content, today }: Props) {
       buildLineScene(tl, stops);
       buildCurveScene(tl, counters, markerTs, rollEls, content.roles.length - 1);
       buildPlaneScene(tl, content.skills.quadrants);
+      buildCubeScene(tl, content.projects.length);
       // The timeline spans exactly the built part of the journey.
       tl.set({}, {}, BUILT_UNTIL);
     }, root);
@@ -106,9 +112,36 @@ export function Journey({ content, today }: Props) {
       rollEls.forEach((el, i) => (el.textContent = counters[i]?.main ?? el.textContent));
       gsap.ticker.remove(raf);
       lenis.destroy();
-      resetMotionState(content.roles.length, content.education.length, counters.length);
+      lenisRef.current = null;
+      resetMotionState(content.roles.length, content.education.length, counters.length, content.projects.length);
     };
-  }, [motion, stops, counters, markerTs, content.roles.length, content.education.length, content.skills.quadrants]);
+  }, [
+    motion,
+    stops,
+    counters,
+    markerTs,
+    content.roles.length,
+    content.education.length,
+    content.skills.quadrants,
+    content.projects.length,
+  ]);
+
+  // Project card: a modal dialog. The page holds still while it is open.
+  useEffect(() => {
+    const el = dialog.current;
+    if (!el) return;
+    if (openProject === null) {
+      if (el.open) el.close();
+      return;
+    }
+    motionState.selected = openProject;
+    lenisRef.current?.stop();
+    if (!el.open) el.showModal();
+    return () => {
+      motionState.selected = -1;
+      lenisRef.current?.start();
+    };
+  }, [openProject]);
 
   const words = content.quote.text.split(" ");
   const journeyStyle = {
@@ -120,7 +153,14 @@ export function Journey({ content, today }: Props) {
     <>
       <div className="grid-bg" aria-hidden />
       {motion && (
-        <Stage roleFracs={roleFracs} eduFracs={eduFracs} markerTs={markerTs} onReady={() => setCanvasReady(true)} />
+        <Stage
+          roleFracs={roleFracs}
+          eduFracs={eduFracs}
+          markerTs={markerTs}
+          projectCount={content.projects.length}
+          anchors={anchors}
+          onReady={() => setCanvasReady(true)}
+        />
       )}
 
       <header ref={nav} className="site-nav">
@@ -276,8 +316,79 @@ export function Journey({ content, today }: Props) {
               ))}
             </div>
           </section>
+
+          {/* Scene 4 — the cube */}
+          <section className="scene scene-cube" data-scene="cube" aria-labelledby="projects">
+            <h2 id="projects" className="scene-title">
+              {content.ui.projects}
+            </h2>
+            <ol className="projects">
+              {content.projects.map((project, k) => (
+                <li key={project.title} className="project" data-project={k}>
+                  {/* In motion mode the canvas keeps this anchor on the project's point. */}
+                  <div className="project-anchor" ref={(el) => void (anchors.current[k] = el)}>
+                    {motion ? (
+                      <button
+                        type="button"
+                        className="project-label"
+                        aria-haspopup="dialog"
+                        onClick={() => setOpenProject(k)}
+                      >
+                        {project.title}
+                      </button>
+                    ) : (
+                      <h3 className="project-title">{project.title}</h3>
+                    )}
+                  </div>
+                  <p className="project-line">{project.line}</p>
+                  {project.href && (
+                    <a className="project-link" href={project.href} target="_blank" rel="noopener noreferrer">
+                      {content.ui.viewLink} ↗
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ol>
+            <p className="projects-hint" aria-hidden>
+              {content.ui.projectsHint}
+            </p>
+          </section>
         </div>
       </main>
+
+      <dialog
+        ref={dialog}
+        className="project-dialog"
+        aria-labelledby="project-dialog-title"
+        onClose={() => setOpenProject(null)}
+        onClick={(e) => {
+          // A click on the backdrop (the dialog element itself) closes it.
+          if (e.target === e.currentTarget) setOpenProject(null);
+        }}
+      >
+        {openProject !== null && (
+          <div className="project-card">
+            <span className="project-kicker">{content.ui.projectKicker}</span>
+            <h3 id="project-dialog-title" className="project-card-title">
+              {content.projects[openProject].title}
+            </h3>
+            <p className="project-card-line">{content.projects[openProject].line}</p>
+            {content.projects[openProject].href && (
+              <a
+                className="project-link"
+                href={content.projects[openProject].href ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {content.ui.viewLink} ↗
+              </a>
+            )}
+            <button type="button" className="project-close" onClick={() => setOpenProject(null)}>
+              {content.ui.close}
+            </button>
+          </div>
+        )}
+      </dialog>
     </>
   );
 }
@@ -474,4 +585,55 @@ function buildPlaneScene(tl: gsap.core.Timeline, quadrants: Quadrant[]) {
     tl.to(`${sel} .quadrant-title`, { color: "#C08A4E", duration: 0.008 }, fillAt);
     tl.to(`${sel} .skill-dot`, { backgroundColor: "#C08A4E", duration: 0.008 }, fillAt + 0.002);
   }
+}
+
+/**
+ * Scene 4 (55–75%): the plane's frame closes, it tilts back and becomes the floor of a
+ * cube that extrudes upward while the view orbits with scroll. The dot then visits each
+ * project point; the point lights up (brown while current) and its name appears. At the
+ * end every name stays as a button that opens the project's card.
+ */
+function buildCubeScene(tl: gsap.core.Timeline, projectCount: number) {
+  const { start, end } = SCENES.cube;
+
+  // Clear scene 3: words, labels, the brown fill and the dividers.
+  tl.to(
+    [".quadrant-title", ".skill-dot", ".skill-text", "[data-plane-label]"],
+    { autoAlpha: 0, duration: 0.006 },
+    start,
+  );
+  tl.to(".quadrant.is-highlight", { backgroundColor: "rgba(192, 138, 78, 0)", borderColor: "rgba(192, 138, 78, 0)", duration: 0.006 }, start);
+  tl.to(motionState, { grid: 0, duration: 0.006 }, start + 0.001);
+
+  // The cube's edges take over from the flat axes; the frame closes.
+  tl.set(motionState, { handoff: 1 }, start + 0.007);
+  tl.to(motionState, { close: 1, duration: 0.007 }, start + 0.008);
+  // Tilt back into perspective, settling into the cube's place and size.
+  tl.to(motionState, { tilt: 1, morph: 1, elev: 1, duration: 0.022 }, start + 0.016);
+  // Extrude upward.
+  tl.to(motionState, { extrude: 1, duration: 0.014 }, start + 0.039);
+  // The view orbits for the rest of the scene.
+  tl.to(motionState, { orbit: 1, duration: end - 0.002 - (start + 0.05), ease: "none" }, start + 0.05);
+
+  const first = start + 0.056;
+  const hintAt = end - 0.012;
+  const L = (hintAt - first) / Math.max(projectCount, 1);
+
+  for (let k = 0; k < projectCount; k++) {
+    const s = first + k * L;
+    tl.to(motionState, { dotPath: k + 1, duration: 0.32 * L, ease: "power1.inOut" }, s);
+    tl.to(motionState.lit[k], { v: 1, duration: 0.1 * L, ease: "power1.out" }, s + 0.3 * L);
+    if (k > 0) tl.to(motionState.act[k - 1], { v: 0, duration: 0.1 * L }, s);
+    tl.to(motionState.act[k], { v: 1, duration: 0.1 * L }, s + 0.3 * L);
+    tl.fromTo(
+      `[data-project="${k}"] .project-label`,
+      { autoAlpha: 0, x: -6 },
+      { autoAlpha: 1, x: 0, duration: 0.16 * L, ease: "power2.out" },
+      s + 0.4 * L,
+    );
+  }
+  // The dot returns to the cube's corner, leaving every point (and its name) clear.
+  if (projectCount > 0) tl.to(motionState.act[projectCount - 1], { v: 0, duration: 0.004 }, hintAt - 0.004);
+  tl.to(motionState, { dotPath: projectCount + 1, duration: 0.008, ease: "power1.inOut" }, hintAt - 0.004);
+  tl.fromTo(".projects-hint", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.006 }, hintAt + 0.002);
 }

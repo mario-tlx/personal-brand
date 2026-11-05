@@ -14,7 +14,7 @@ export const SCENES = {
 } as const;
 
 /** Scenes built so far end here; the page's scroll length covers only this part. */
-export const BUILT_UNTIL = SCENES.plane.end;
+export const BUILT_UNTIL = SCENES.cube.end;
 
 /** Scroll length of the whole journey (0 → 1), in viewport heights. Phone is shorter. */
 export const JOURNEY_VH = { desktop: 2400, phone: 1800 };
@@ -52,6 +52,31 @@ export const CURVE = {
 export const PLANE = {
   desktop: { x0: 0.1, x1: 0.9, yTop: 0.15, yBottom: 0.86 },
   phone: { left: 30, right: 12, yTop: 0.12, yBottom: 0.9 },
+} as const;
+
+/**
+ * Scene 4: the cube. The plane becomes the cube's floor: it tilts back, extrudes upward,
+ * and the view orbits with scroll. Sizes and centers are fractions of the viewport
+ * (desktop: size of the height; phone: size of the width).
+ */
+export const CUBE = {
+  /** Final downward look at the cube, radians (shows the top face). */
+  elev: 0.42,
+  /** How far the view orbits over the scene, radians. */
+  orbit: 0.75,
+  desktop: { size: 0.38, cx: 0.42, cy: 0.54 },
+  /** Phone: the cube sits higher; the project names are a list of buttons below it. */
+  phone: { size: 0.52, cx: 0.5, cy: 0.36 },
+  /**
+   * Project points inside the cube, in cube coordinates: x and y span -0.5..0.5 on the
+   * floor (x = data and AI depth, y = finance depth), z is height 0..1.
+   */
+  points: [
+    [-0.22, 0.2, 0.72],
+    [0.25, 0.25, 0.4],
+    [-0.25, -0.2, 0.3],
+    [0.2, -0.25, 0.8],
+  ] as [number, number, number][],
 } as const;
 
 /** 0 → 1 rise of the chart line at t (0 = left end, 1 = right end). */

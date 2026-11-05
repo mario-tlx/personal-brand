@@ -420,6 +420,152 @@ body {
   color: var(--color-ink);
 }
 
+/* Projects, as a list of cards */
+.scene-cube {
+  align-items: stretch;
+  text-align: left;
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.projects {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 16px;
+}
+
+.project {
+  padding: 18px 20px;
+  border: 1px solid var(--color-grid);
+  border-radius: 4px;
+}
+
+.project-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+.project-line {
+  margin: 0.5rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: rgb(236 230 218 / 0.82);
+}
+
+.project-link {
+  display: inline-block;
+  margin-top: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--color-blue);
+  text-decoration: none;
+  border-bottom: 1px solid rgb(79 163 217 / 0.4);
+}
+
+.project-link:hover,
+.project-link:focus-visible {
+  border-bottom-color: var(--color-blue);
+}
+
+.projects-hint {
+  display: none;
+}
+
+.project-dialog {
+  box-sizing: border-box;
+  width: min(380px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  margin: auto 24px auto auto;
+  padding: 0;
+  border: 1px solid var(--color-grid);
+  border-top: 2px solid var(--color-brown);
+  border-radius: 4px;
+  background: rgb(14 20 32 / 0.96);
+  color: var(--color-ink);
+}
+
+.project-dialog::backdrop {
+  background: rgb(14 20 32 / 0.45);
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 24px 24px 22px;
+}
+
+.project-kicker {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-brown);
+}
+
+.project-card-title {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+.project-card-line {
+  margin: 0.8rem 0 0;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: rgb(236 230 218 / 0.86);
+}
+
+.project-close {
+  margin-top: 1.4rem;
+  padding: 8px 14px;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  background: transparent;
+  border: 1px solid var(--color-quiet);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.project-close:hover,
+.project-close:focus-visible {
+  border-color: var(--color-ink);
+}
+
+@media (max-width: 767px) {
+  /* Phone: the card opens full screen. */
+  .project-dialog {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-top: 2px solid var(--color-brown);
+    border-radius: 0;
+  }
+
+  .project-card {
+    min-height: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    padding: 32px 24px;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -464,7 +610,7 @@ body {
   pointer-events: none;
 }
 
-.motion .scene :is(.quote, .ident, .role-card, .edu-label, .number, .quadrant-title, .skill) {
+.motion .scene :is(.quote, .ident, .role-card, .edu-label, .number, .quadrant-title, .skill, .project-label) {
   pointer-events: auto;
 }
 
@@ -771,6 +917,83 @@ body {
   transform: rotate(-90deg) translateX(-100%);
 }
 
+/* Scene 4: the cube. The canvas moves each .project-anchor onto its point every frame. */
+.motion .projects {
+  display: block;
+}
+
+.motion .project {
+  padding: 0;
+  border: 0;
+}
+
+.motion .project-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.motion .project-line,
+.motion .project .project-link {
+  display: none;
+}
+
+.motion .project-label {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  width: max-content;
+  max-width: 15rem;
+  margin-top: -0.75em;
+  padding: 2px 6px;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  line-height: 1.25;
+  text-align: left;
+  color: var(--color-ink);
+  background: rgb(14 20 32 / 0.6);
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .project-anchor[data-side="left"] .project-label {
+  left: auto;
+  right: 14px;
+  text-align: right;
+}
+
+.motion .project-label:hover,
+.motion .project-label:focus-visible {
+  color: var(--color-brown);
+  outline: none;
+}
+
+.motion .project-label:focus-visible {
+  box-shadow: 0 0 0 1px var(--color-brown);
+}
+
+.motion .projects-hint {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+  opacity: 0;
+  visibility: hidden;
+}
+
 @media (max-width: 767px) {
   .motion .quote {
     bottom: calc(50% + 36px);
@@ -900,5 +1123,36 @@ body {
 
   .motion .plane-y {
     left: 8px;
+  }
+
+  /* Phone: names as a list below the cube (points are too close together to label). */
+  .motion .projects {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .motion .project-anchor {
+    position: static;
+    width: auto;
+    height: auto;
+    transform: none !important;
+  }
+
+  .motion .project-label,
+  .motion .project-anchor[data-side="left"] .project-label {
+    position: static;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 9px 12px;
+    font-size: 1rem;
+    text-align: left;
+    background: rgb(14 20 32 / 0.85);
+    border: 1px solid var(--color-grid);
   }
 }

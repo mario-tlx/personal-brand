@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   BufferAttribute,
@@ -8,11 +8,14 @@ import {
   Color,
   DoubleSide,
   DynamicDrawUsage,
+  Euler,
+  Matrix4,
+  Vector3,
   type Group,
   type Mesh,
   type MeshBasicMaterial,
 } from "three";
-import { AXIS, CURVE, PHONE_MAX_WIDTH, PLANE, growth, growthSlope } from "@/lib/journey";
+import { AXIS, CUBE, CURVE, PHONE_MAX_WIDTH, PLANE, growth, growthSlope } from "@/lib/journey";
 import { motionState } from "@/lib/motion-state";
 
 const BLUE = "#4FA3D9";
@@ -25,8 +28,50 @@ const EDU_PX = 10;
 const MARKER_PX = 7;
 /** The line is drawn as a ribbon of this many segments, so it can bend. */
 const SEGMENTS = 160;
+const POINT_PX = 5;
 
-type Props = { roleFracs: number[]; eduFracs: number[]; markerTs: number[] };
+type Vec3 = [number, number, number];
+type Edge = { a: Vec3; b: Vec3; kind: "axis" | "grow" | "up" };
+
+/**
+ * The cube's 12 edges in cube coordinates (floor x, y in -0.5..0.5, height z in 0..1).
+ * "axis" edges are the plane's two axes; "grow" edges close the plane's frame;
+ * "up" edges exist only once the cube extrudes.
+ */
+const EDGES: Edge[] = [
+  { a: [-0.5, -0.5, 0], b: [0.5, -0.5, 0], kind: "axis" },
+  { a: [-0.5, -0.5, 0], b: [-0.5, 0.5, 0], kind: "axis" },
+  { a: [-0.5, 0.5, 0], b: [0.5, 0.5, 0], kind: "grow" },
+  { a: [0.5, -0.5, 0], b: [0.5, 0.5, 0], kind: "grow" },
+  { a: [-0.5, -0.5, 0], b: [-0.5, -0.5, 1], kind: "up" },
+  { a: [0.5, -0.5, 0], b: [0.5, -0.5, 1], kind: "up" },
+  { a: [0.5, 0.5, 0], b: [0.5, 0.5, 1], kind: "up" },
+  { a: [-0.5, 0.5, 0], b: [-0.5, 0.5, 1], kind: "up" },
+  { a: [-0.5, -0.5, 1], b: [0.5, -0.5, 1], kind: "up" },
+  { a: [-0.5, -0.5, 1], b: [-0.5, 0.5, 1], kind: "up" },
+  { a: [-0.5, 0.5, 1], b: [0.5, 0.5, 1], kind: "up" },
+  { a: [0.5, -0.5, 1], b: [0.5, 0.5, 1], kind: "up" },
+];
+
+/** Where the dot starts its 3D tour: the cube's corner at the plane's origin. */
+const CORNER: Vec3 = [-0.5, -0.5, 0];
+
+// Scratch objects for the per-frame cube math (one canvas, so module scope is fine).
+const M = new Matrix4();
+const M2 = new Matrix4();
+const EUL = new Euler(0, 0, 0, "XYZ");
+const VA = new Vector3();
+const VB = new Vector3();
+const VUP = new Vector3(0, 1, 0);
+
+type Props = {
+  roleFracs: number[];
+  eduFracs: number[];
+  markerTs: number[];
+  projectCount: number;
+  /** Project labels in the HTML layer; the canvas keeps each one on its point. */
+  anchors: RefObject<(HTMLElement | null)[]>;
+};
 
 /** The one fixed canvas behind the page for the whole scroll. */
 export default function Stage({ onReady, ...props }: Props & { onReady: () => void }) {
@@ -70,10 +115,19 @@ function smoothstep(edge0: number, edge1: number, x: number) {
 
 /**
  * The dot. One object that morphs scene to scene: dot → time axis (with role ticks and
- * education markers) → rising chart line → the two axes of the skills plane. Children are laid out in CSS pixels (y down);
- * the parent group maps pixels onto the z = 0 plane.
+ * education markers) → rising chart line → the two axes of the skills plane → a wireframe
+ * cube. Flat parts are laid out in CSS pixels (y down) in a group that maps pixels onto the
+ * z = 0 plane; the cube lives in world space and is projected back to pixels for the dot,
+ * the project points and their HTML labels.
  */
-function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady: () => void }) {
+function DotObject({
+  roleFracs,
+  eduFracs,
+  markerTs,
+  projectCount,
+  anchors,
+  onReady,
+}: Props & { onReady: () => void }) {
   const size = useThree((s) => s.size);
   const viewport = useThree((s) => s.viewport);
   const announced = useRef(false);
@@ -93,8 +147,10 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
   const yAxis = useRef<Mesh>(null);
   const gridV = useRef<Mesh>(null);
   const gridH = useRef<Mesh>(null);
+  const edges = useRef<(Mesh | null)[]>([]);
+  const points = useRef<(Mesh | null)[]>([]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     if (!group.current || !dot.current || !halo.current || !line.current) return;
     if (!yAxis.current || !gridV.current || !gridH.current) return;
     const W = size.width;
@@ -145,9 +201,11 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
       return (flat ? y + (plane.yb - y) * flat : y) + oy;
     };
 
+    const cubeOn = motionState.handoff > 0.5;
+
     // The line (axis, then curve), as a ribbon of LINE_PX width.
     const len = motionState.lineLen;
-    line.current.visible = len > 0.001;
+    line.current.visible = len > 0.001 && !cubeOn;
     if (line.current.visible) {
       const pts = scratch.current;
       const geometry = line.current.geometry;
@@ -231,7 +289,7 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
 
     // The second axis swings up around the origin, from lying on the x-axis to upright.
     const swing = motionState.swing;
-    yAxis.current.visible = swing > 0.001;
+    yAxis.current.visible = swing > 0.001 && !cubeOn;
     if (yAxis.current.visible) {
       const theta = (swing * Math.PI) / 2;
       const L = plane.yb - plane.yt;
@@ -255,9 +313,94 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
       gridH.current.scale.set(lh, 1, 1);
     }
 
+    // The cube: cube coordinates → world. The plane's rectangle (on screen, at z = 0)
+    // morphs into a centered cube of side S, tilting back to become its floor.
+    const kpx = viewport.width / W;
+    const toWorldX = (x: number) => (x - W / 2) * kpx;
+    const toWorldY = (y: number) => (H / 2 - y) * kpx;
+    const S = phone ? CUBE.phone.size * viewport.width : CUBE.desktop.size * viewport.height;
+    const c = phone ? CUBE.phone : CUBE.desktop;
+    const m = motionState.morph;
+    const rectX = toWorldX((plane.x0 + plane.x1) / 2);
+    const rectY = toWorldY((plane.yt + plane.yb) / 2);
+    const floorX = toWorldX(c.cx * W);
+    const floorY = toWorldY(c.cy * H) - (S / 2) * Math.cos(CUBE.elev);
+    const floorZ = -(S / 2) * Math.sin(CUBE.elev);
+    const A = (plane.x1 - plane.x0) * kpx * (1 - m) + S * m;
+    const B = (plane.yb - plane.yt) * kpx * (1 - m) + S * m;
+    const C = Math.max(S * motionState.extrude, 1e-4);
+    M.makeTranslation(rectX + (floorX - rectX) * m, rectY + (floorY - rectY) * m, floorZ * m);
+    EUL.set(motionState.elev * CUBE.elev, motionState.orbit * CUBE.orbit, 0);
+    M.multiply(M2.makeRotationFromEuler(EUL));
+    M.multiply(M2.makeRotationX((-motionState.tilt * Math.PI) / 2));
+    M.multiply(M2.makeScale(A, B, C));
+
+    const th = LINE_PX * kpx;
+    EDGES.forEach((e, i) => {
+      const mesh = edges.current[i];
+      if (!mesh) return;
+      const grow = e.kind === "grow" ? motionState.close : 1;
+      mesh.visible =
+        cubeOn &&
+        (e.kind === "axis" || (e.kind === "grow" && grow > 0.001) || (e.kind === "up" && motionState.extrude > 0.001));
+      if (!mesh.visible) return;
+      VA.set(e.a[0], e.a[1], e.a[2]).applyMatrix4(M);
+      VB.set(
+        e.a[0] + (e.b[0] - e.a[0]) * grow,
+        e.a[1] + (e.b[1] - e.a[1]) * grow,
+        e.a[2] + (e.b[2] - e.a[2]) * grow,
+      ).applyMatrix4(M);
+      const l = VA.distanceTo(VB);
+      mesh.position.copy(VA).add(VB).multiplyScalar(0.5);
+      if (l > 1e-6) mesh.quaternion.setFromUnitVectors(VUP, VB.sub(VA).normalize());
+      mesh.scale.set(th, Math.max(l, 1e-4), th);
+    });
+
+    // Cube coordinates → screen pixels.
+    const toPx = (p: Vec3): [number, number] => {
+      VA.set(p[0], p[1], p[2]).applyMatrix4(M).project(camera);
+      return [((VA.x + 1) / 2) * W, ((1 - VA.y) / 2) * H];
+    };
+    const pointAt = (i: number): Vec3 => CUBE.points[i % CUBE.points.length];
+
+    // Project points (and their HTML labels) light up inside the cube.
+    for (let i = 0; i < projectCount; i++) {
+      const mesh = points.current[i];
+      const anchor = anchors.current?.[i];
+      const [sx, sy] = cubeOn ? toPx(pointAt(i)) : [0, 0];
+      const v = motionState.lit[i]?.v ?? 0;
+      if (mesh) {
+        mesh.visible = cubeOn && v > 0.001;
+        if (mesh.visible) {
+          mesh.position.set(sx, sy, 0.02);
+          mesh.scale.setScalar(POINT_PX * v);
+          const w = motionState.selected === i ? 1 : (motionState.act[i]?.v ?? 0);
+          (mesh.material as MeshBasicMaterial).color.copy(colors.blue).lerp(colors.brown, w);
+        }
+      }
+      if (anchor && cubeOn) {
+        anchor.style.setProperty("transform", `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0)`);
+        anchor.setAttribute("data-side", sx > W * 0.6 ? "left" : "right");
+      }
+    }
+
     // The dot, and its slow breathing halo (the only thing on a timer).
-    const dx = px(motionState.dotFrac);
-    const dy = py(motionState.dotFrac);
+    // From the cube's handoff on it travels in 3D: the corner, each project point, and
+    // back to the corner (path 0 … projectCount + 1).
+    let dx = px(motionState.dotFrac);
+    let dy = py(motionState.dotFrac);
+    if (cubeOn && projectCount > 0) {
+      const path = Math.min(Math.max(motionState.dotPath, 0), projectCount + 1);
+      const seg = Math.min(Math.floor(path), projectCount);
+      const f = path - seg;
+      const from = seg === 0 ? CORNER : pointAt(seg - 1);
+      const to = seg === projectCount ? CORNER : pointAt(seg);
+      [dx, dy] = toPx([
+        from[0] + (to[0] - from[0]) * f,
+        from[1] + (to[1] - from[1]) * f,
+        from[2] + (to[2] - from[2]) * f,
+      ]);
+    }
     const r = motionState.dotR;
     dot.current.position.set(dx, dy, 0.03);
     dot.current.scale.setScalar(r);
@@ -275,7 +418,18 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
   });
 
   return (
-    <group ref={group}>
+    <>
+      {/* World space: the cube's edges. */}
+      <group>
+        {EDGES.map((_, i) => (
+          <mesh key={`edge-${i}`} ref={(el) => void (edges.current[i] = el)} visible={false}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshBasicMaterial color={BLUE} />
+          </mesh>
+        ))}
+      </group>
+
+      <group ref={group}>
       <mesh ref={line} geometry={ribbon} frustumCulled={false} visible={false}>
         <meshBasicMaterial vertexColors side={DoubleSide} />
       </mesh>
@@ -315,6 +469,13 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
         <meshBasicMaterial color={QUIET} side={DoubleSide} transparent opacity={0.55} />
       </mesh>
 
+      {Array.from({ length: projectCount }, (_, i) => (
+        <mesh key={`point-${i}`} ref={(el) => void (points.current[i] = el)} visible={false}>
+          <circleGeometry args={[1, 32]} />
+          <meshBasicMaterial color={BLUE} side={DoubleSide} />
+        </mesh>
+      ))}
+
       <mesh ref={halo}>
         <ringGeometry args={[0.82, 1, 64]} />
         <meshBasicMaterial color={BLUE} side={DoubleSide} transparent depthWrite={false} />
@@ -324,6 +485,7 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
         <circleGeometry args={[1, 48]} />
         <meshBasicMaterial color={BLUE} side={DoubleSide} />
       </mesh>
-    </group>
+      </group>
+    </>
   );
 }

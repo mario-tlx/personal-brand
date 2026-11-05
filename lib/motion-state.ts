@@ -31,11 +31,33 @@ export const motionState = {
   swing: 0,
   /** Scene 3: the quadrant dividers draw in (0 → 1). */
   grid: 0,
+  /** Scene 4: 1 once the cube's edges take over from the flat axes (and the dot goes 3D). */
+  handoff: 0,
+  /** Scene 4: the plane's top and right edges draw in, closing the frame (0 → 1). */
+  close: 0,
+  /** Scene 4: the plane tilts back to become the cube's floor (0 → 1). */
+  tilt: 0,
+  /** Scene 4: the plane's size and place morph into the cube's (0 → 1). */
+  morph: 0,
+  /** Scene 4: the downward look at the cube (0 → 1 of CUBE.elev). */
+  elev: 0,
+  /** Scene 4: the floor extrudes upward into a cube (0 → 1). */
+  extrude: 0,
+  /** Scene 4: orbit of the view around the cube (0 → 1 of CUBE.orbit). */
+  orbit: 0,
+  /** Scene 4: the dot's tour: 0 = the cube's corner, k = project point k, last = back to the corner. */
+  dotPath: 0,
+  /** 0 → 1 lighting of each project point. */
+  lit: [] as Level[],
+  /** 0 → 1 "current" state of each project point during the tour (brown). */
+  act: [] as Level[],
+  /** The project whose card is open (brown), or -1. Set by clicks, not by scroll. */
+  selected: -1,
 };
 
 export const INITIAL_DOT_R = 8;
 
-export function resetMotionState(roleCount: number, eduCount: number, markerCount: number) {
+export function resetMotionState(roleCount: number, eduCount: number, markerCount: number, projectCount: number) {
   motionState.gather = 0;
   motionState.lineLen = 0;
   motionState.dotFrac = 0.5;
@@ -48,4 +70,15 @@ export function resetMotionState(roleCount: number, eduCount: number, markerCoun
   motionState.flat = 0;
   motionState.swing = 0;
   motionState.grid = 0;
+  motionState.handoff = 0;
+  motionState.close = 0;
+  motionState.tilt = 0;
+  motionState.morph = 0;
+  motionState.elev = 0;
+  motionState.extrude = 0;
+  motionState.orbit = 0;
+  motionState.dotPath = 0;
+  motionState.lit = Array.from({ length: projectCount }, () => ({ v: 0 }));
+  motionState.act = Array.from({ length: projectCount }, () => ({ v: 0 }));
+  motionState.selected = -1;
 }
