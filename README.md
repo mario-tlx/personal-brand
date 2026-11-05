@@ -23,7 +23,9 @@ Open http://localhost:3000. Add `?still` to preview the reduced-motion version.
 - `content/site.ts`: every word, number and link (English now; Spanish comes later).
 - `lib/journey.ts`: scene scroll ranges, scroll length and axis layout.
 - `components/journey/Journey.tsx`: the HTML layer and the master scroll timeline.
-- `components/journey/Stage.tsx`: the single fixed 3D canvas (the dot).
+- `components/journey/Stage.tsx`: the single fixed 3D canvas (the dot, the line, the plane, the cube).
+- `components/journey/Drawings.tsx`: the five line drawings of "Beyond work".
+- `content/credits.ts`: source and license of every image or traced artwork.
 
 ## Scripts
 

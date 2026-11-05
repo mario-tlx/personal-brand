@@ -57,6 +57,10 @@ export const motionState = {
   shatter: 0,
   /** Scene 5: the dot leaves the cube for the center of the orbit drawing (0 → 1). */
   dotRest: 0,
+  /** Scene 6: the dot goes to its final place beside the contact card (0 → 1). */
+  dotHome: 0,
+  /** Scene 6: the single closing pulse, a ring that grows and fades (0 → 1). */
+  pulse: 0,
 };
 
 export const INITIAL_DOT_R = 8;
@@ -87,4 +91,6 @@ export function resetMotionState(roleCount: number, eduCount: number, markerCoun
   motionState.selected = -1;
   motionState.shatter = 0;
   motionState.dotRest = 0;
+  motionState.dotHome = 0;
+  motionState.pulse = 0;
 }

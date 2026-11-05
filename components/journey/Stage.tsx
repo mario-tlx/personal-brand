@@ -15,7 +15,18 @@ import {
   type Mesh,
   type MeshBasicMaterial,
 } from "three";
-import { AXIS, BEYOND, CUBE, CURVE, PHONE_MAX_WIDTH, PLANE, beyondSlot, growth, growthSlope } from "@/lib/journey";
+import {
+  AXIS,
+  BEYOND,
+  CLOSING,
+  CUBE,
+  CURVE,
+  PHONE_MAX_WIDTH,
+  PLANE,
+  beyondSlot,
+  growth,
+  growthSlope,
+} from "@/lib/journey";
 import { motionState } from "@/lib/motion-state";
 
 const BLUE = "#4FA3D9";
@@ -120,7 +131,8 @@ function smoothstep(edge0: number, edge1: number, x: number) {
 /**
  * The dot. One object that morphs scene to scene: dot → time axis (with role ticks and
  * education markers) → rising chart line → the two axes of the skills plane → a wireframe
- * cube that breaks apart, leaving the dot at the center of the orbit drawing. Flat parts are laid out in CSS pixels (y down) in a group that maps pixels onto the
+ * cube that breaks apart, leaving the dot at the center of the orbit drawing → back to a
+ * single dot beside the contact card. Flat parts are laid out in CSS pixels (y down) in a group that maps pixels onto the
  * z = 0 plane; the cube lives in world space and is projected back to pixels for the dot,
  * the project points and their HTML labels.
  */
@@ -146,6 +158,7 @@ function DotObject({
   const group = useRef<Group>(null);
   const dot = useRef<Mesh>(null);
   const halo = useRef<Mesh>(null);
+  const pulse = useRef<Mesh>(null);
   const line = useRef<Mesh>(null);
   const ticks = useRef<(Mesh | null)[]>([]);
   const edus = useRef<(Mesh | null)[]>([]);
@@ -157,7 +170,7 @@ function DotObject({
   const points = useRef<(Mesh | null)[]>([]);
 
   useFrame(({ clock, camera }) => {
-    if (!group.current || !dot.current || !halo.current || !line.current) return;
+    if (!group.current || !dot.current || !halo.current || !line.current || !pulse.current) return;
     if (!yAxis.current || !gridV.current || !gridH.current) return;
     const W = size.width;
     const H = size.height;
@@ -417,11 +430,17 @@ function DotObject({
         from[2] + (to[2] - from[2]) * f,
       ]);
     }
+    const home = motionState.dotHome;
     const rest = motionState.dotRest;
     if (rest > 0 && slotCount > 0) {
       const slot = beyondSlot(restSlot, slotCount, phone ? BEYOND.phone : BEYOND.desktop);
       dx += (slot.x * W - dx) * rest;
       dy += (slot.y * H - dy) * rest;
+    }
+    if (home > 0) {
+      const c = phone ? CLOSING.phone : CLOSING.desktop;
+      dx += (c.x * W - dx) * home;
+      dy += (c.y * H - dy) * home;
     }
     const r = motionState.dotR;
     dot.current.position.set(dx, dy, 0.03);
@@ -431,6 +450,15 @@ function DotObject({
     halo.current.position.set(dx, dy, 0.025);
     halo.current.scale.setScalar(r * (1 + 1.6 * t));
     (halo.current.material as MeshBasicMaterial).opacity = 0.4 * (1 - t) * (1 - t);
+
+    // The single closing pulse (scrubbed by scroll, unlike the breathing halo).
+    const p = motionState.pulse;
+    pulse.current.visible = p > 0.001 && p < 0.999;
+    if (pulse.current.visible) {
+      pulse.current.position.set(dx, dy, 0.026);
+      pulse.current.scale.setScalar(r * (1 + 5 * p));
+      (pulse.current.material as MeshBasicMaterial).opacity = 0.7 * (1 - p);
+    }
 
     // First drawn frame: the 3D dot is on screen, the CSS stand-in can go.
     if (!announced.current) {
@@ -497,6 +525,11 @@ function DotObject({
           <meshBasicMaterial color={BLUE} side={DoubleSide} />
         </mesh>
       ))}
+
+      <mesh ref={pulse} visible={false}>
+        <ringGeometry args={[0.9, 1, 64]} />
+        <meshBasicMaterial color={BLUE} side={DoubleSide} transparent depthWrite={false} />
+      </mesh>
 
       <mesh ref={halo}>
         <ringGeometry args={[0.82, 1, 64]} />

@@ -14,7 +14,7 @@ export const SCENES = {
 } as const;
 
 /** Scenes built so far end here; the page's scroll length covers only this part. */
-export const BUILT_UNTIL = SCENES.beyond.end;
+export const BUILT_UNTIL = SCENES.back.end;
 
 /** Scroll length of the whole journey (0 → 1), in viewport heights. Phone is shorter. */
 export const JOURNEY_VH = { desktop: 2400, phone: 1800 };
@@ -87,6 +87,15 @@ export const CUBE = {
 export const BEYOND = {
   desktop: { cx: 0.5, cy: 0.52, rx: 0.33, ry: 0.33, photoW: 210, slot: 120 },
   phone: { cx: 0.5, cy: 0.5, rx: 0.36, ry: 0.32, photoW: 140, slot: 80 },
+} as const;
+
+/**
+ * Scene 6: where the dot comes to rest, as viewport fractions. The contact card sits to
+ * its right on desktop and below it on phone (CSS reads these through variables).
+ */
+export const CLOSING = {
+  desktop: { x: 0.3, y: 0.5 },
+  phone: { x: 0.5, y: 0.32 },
 } as const;
 
 /** Center of drawing slot i of n, as viewport fractions. */

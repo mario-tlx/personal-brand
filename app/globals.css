@@ -612,10 +612,11 @@ body {
 .drawing-art .stroke {
   fill: none;
   stroke: var(--color-blue);
+  /* In drawing units (the box is 100 wide); no non-scaling-stroke, which breaks the
+     pathLength-based draw-in in Chrome. */
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
 }
 
 .orbit-center {
@@ -629,6 +630,90 @@ body {
 .drawing-caption {
   font-size: 0.82rem;
   color: rgb(236 230 218 / 0.8);
+}
+
+/* Back to a dot: the closing line and the contact links */
+.scene-back {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  gap: 28px;
+}
+
+.scene-back .scene-title {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+.closing-dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-blue);
+  box-shadow: 0 0 24px rgb(79 163 217 / 0.45);
+}
+
+.contact {
+  text-align: left;
+}
+
+.closing {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.closing-word {
+  display: inline-block;
+}
+
+.contact-links {
+  list-style: none;
+  margin: 1.2rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+
+.contact-links a {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  color: var(--color-blue);
+  text-decoration: none;
+  border-bottom: 1px solid rgb(79 163 217 / 0.4);
+}
+
+.contact-links a:hover,
+.contact-links a:focus-visible {
+  border-bottom-color: var(--color-blue);
+  outline: none;
+}
+
+.contact-links a:focus-visible {
+  box-shadow: 0 0 0 2px rgb(79 163 217 / 0.35);
+}
+
+@media (max-width: 767px) {
+  .scene-back {
+    grid-template-columns: auto;
+    justify-items: center;
+  }
+
+  .contact {
+    text-align: center;
+  }
+
+  .contact-links {
+    justify-content: center;
+  }
 }
 
 .sr-only {
@@ -675,7 +760,7 @@ body {
   pointer-events: none;
 }
 
-.motion .scene :is(.quote, .ident, .role-card, .edu-label, .number, .quadrant-title, .skill, .project-label) {
+.motion .scene :is(.quote, .ident, .role-card, .edu-label, .number, .quadrant-title, .skill, .project-label, .contact) {
   pointer-events: auto;
 }
 
@@ -1106,6 +1191,27 @@ body {
   visibility: hidden;
 }
 
+/* Scene 6: the card sits to the right of the dot's resting place (CLOSING in lib/journey.ts). */
+.motion .closing-dot {
+  display: none;
+}
+
+.motion .contact {
+  position: absolute;
+  left: calc(var(--cx-d) * 100% + 44px);
+  top: calc(var(--cy-d) * 100%);
+  width: min(34rem, calc(100% - var(--cx-d) * 100% - 88px));
+  transform: translateY(-50%);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .closing-word,
+.motion .contact-links li {
+  opacity: 0;
+  visibility: hidden;
+}
+
 @media (max-width: 767px) {
   .motion .quote {
     bottom: calc(50% + 36px);
@@ -1285,5 +1391,13 @@ body {
     top: calc(100% + 4px);
     max-width: 7rem;
     font-size: 0.72rem;
+  }
+
+  .motion .contact {
+    left: 24px;
+    right: 24px;
+    width: auto;
+    top: calc(var(--cy-p) * 100% + 44px);
+    transform: none;
   }
 }

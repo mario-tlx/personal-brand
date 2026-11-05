@@ -11,6 +11,7 @@ import { Drawing } from "./Drawings";
 import {
   BEYOND,
   BUILT_UNTIL,
+  CLOSING,
   JOURNEY_VH,
   SCENES,
   beyondSlot,
@@ -106,6 +107,7 @@ export function Journey({ content, today }: Props) {
       buildPlaneScene(tl, content.skills.quadrants);
       buildCubeScene(tl, content.projects.length);
       buildBeyondScene(tl, content.beyond.drawings.length);
+      buildBackScene(tl);
       // The timeline spans exactly the built part of the journey.
       tl.set({}, {}, BUILT_UNTIL);
     }, root);
@@ -149,6 +151,13 @@ export function Journey({ content, today }: Props) {
   }, [openProject]);
 
   const words = content.quote.text.split(" ");
+  const closingWords = content.closing.split(" ");
+  const contactStyle = {
+    "--cx-d": CLOSING.desktop.x,
+    "--cy-d": CLOSING.desktop.y,
+    "--cx-p": CLOSING.phone.x,
+    "--cy-p": CLOSING.phone.y,
+  } as CSSProperties;
   const orbitSlot = Math.max(
     0,
     content.beyond.drawings.findIndex((d) => d.id === "orbit"),
@@ -398,6 +407,38 @@ export function Journey({ content, today }: Props) {
                 </li>
               ))}
             </ul>
+          </section>
+
+          {/* Scene 6 — back to a dot */}
+          <section className="scene scene-back" data-scene="back" aria-labelledby="closing" style={contactStyle}>
+            <h2 className="scene-title">{content.ui.contact}</h2>
+            {/* Shown where there is no canvas: the page ends on a dot, as it began. */}
+            <span className="closing-dot" aria-hidden />
+            <div className="contact">
+              <p id="closing" className="closing">
+                {closingWords.map((w, i) => (
+                  <Fragment key={i}>
+                    <span className="closing-word">{w}</span>
+                    {i < closingWords.length - 1 ? " " : ""}
+                  </Fragment>
+                ))}
+              </p>
+              <ul className="contact-links">
+                <li>
+                  <a href={`mailto:${content.contact.email}`}>{content.contact.email}</a>
+                </li>
+                <li>
+                  <a href={content.contact.linkedin} target="_blank" rel="noopener noreferrer">
+                    {content.ui.linkedin} ↗
+                  </a>
+                </li>
+                <li>
+                  <a href={content.contact.github} target="_blank" rel="noopener noreferrer">
+                    {content.ui.github} ↗
+                  </a>
+                </li>
+              </ul>
+            </div>
           </section>
         </div>
       </main>
@@ -716,4 +757,37 @@ function buildBeyondScene(tl: gsap.core.Timeline, drawingCount: number) {
     );
     tl.fromTo(`${sel} .drawing-caption`, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 * D }, s + 0.72 * D);
   }
+}
+
+/**
+ * Scene 6 (88–100%): every line folds back (the drawings retract), the photo and captions
+ * leave, and the dot travels to its place beside the contact card. The closing line writes
+ * in word by word, as the quote did at the start; the links follow; the dot pulses once.
+ */
+function buildBackScene(tl: gsap.core.Timeline) {
+  const { start, end } = SCENES.back;
+
+  tl.to(".drawing-caption", { autoAlpha: 0, duration: 0.005 }, start);
+  tl.to(".drawing .stroke", { strokeDashoffset: 1, duration: 0.014, ease: "power1.inOut" }, start + 0.002);
+  // Round line caps leave specks at dashoffset 1; hide each drawing once it has folded.
+  tl.to(".drawing-art", { autoAlpha: 0, duration: 0.002 }, start + 0.015);
+  tl.to("[data-photo]", { autoAlpha: 0, scale: 0.96, duration: 0.01 }, start + 0.004);
+
+  tl.to(motionState, { dotHome: 1, dotR: 8, duration: 0.018 }, start + 0.016);
+
+  tl.set(".contact", { autoAlpha: 1 }, start + 0.034);
+  tl.fromTo(
+    ".closing-word",
+    { autoAlpha: 0, y: 10 },
+    { autoAlpha: 1, y: 0, duration: 0.008, ease: "power1.out", stagger: { amount: 0.02 } },
+    start + 0.034,
+  );
+  tl.fromTo(
+    ".contact-links li",
+    { autoAlpha: 0, y: 6 },
+    { autoAlpha: 1, y: 0, duration: 0.008, stagger: { amount: 0.008 } },
+    start + 0.064,
+  );
+  tl.fromTo(motionState, { pulse: 0 }, { pulse: 1, duration: 0.024, ease: "power1.out" }, start + 0.084);
+  tl.set({}, {}, end);
 }
