@@ -14,7 +14,7 @@ export const SCENES = {
 } as const;
 
 /** Scenes built so far end here; the page's scroll length covers only this part. */
-export const BUILT_UNTIL = SCENES.line.end;
+export const BUILT_UNTIL = SCENES.curve.end;
 
 /** Scroll length of the whole journey (0 → 1), in viewport heights. Phone is shorter. */
 export const JOURNEY_VH = { desktop: 2400, phone: 1800 };
@@ -31,6 +31,62 @@ export const AXIS = {
   desktop: { y: 0.5, x0: 0.1, x1: 0.9 },
   phone: { x: 76, y0: 0.14, y1: 0.86 },
 } as const;
+
+/**
+ * Scene 2: the axis bends into a rising chart line. Same idea as AXIS: fractions of the
+ * viewport (phone x uses a pixel gutter). y0 is the left (2015) end, y1 the right (today) end.
+ */
+export const CURVE = {
+  /** Steepness of the growth curve; higher = flatter start, steeper finish. */
+  k: 2.6,
+  desktop: { x0: 0.1, x1: 0.9, y0: 0.8, y1: 0.36 },
+  phone: { pad: 24, y0: 0.9, y1: 0.62 },
+} as const;
+
+/** 0 → 1 rise of the chart line at t (0 = left end, 1 = right end). */
+export function growth(t: number) {
+  return (Math.exp(CURVE.k * t) - 1) / (Math.exp(CURVE.k) - 1);
+}
+
+/** Slope of the curve at t, normalized so the steepest point (t = 1) is 1. */
+export function growthSlope(t: number) {
+  return Math.exp(CURVE.k * (t - 1));
+}
+
+/** Where counter i of n sits along the curve: the center of its column. */
+export const counterT = (i: number, n: number) => (i + 0.5) / n;
+
+/** Desktop only: viewport height fraction of the curve at t (for the dashed leaders in CSS). */
+export const curveYDesktop = (t: number) =>
+  CURVE.desktop.y0 - (CURVE.desktop.y0 - CURVE.desktop.y1) * growth(t);
+
+export type Counter = {
+  prefix: string;
+  /** The number that rolls up from 0, or null when the value has no number. */
+  num: number | null;
+  decimals: number;
+  suffix: string;
+  /** Text after an arrow ("3 days → hours"), shown once the roll ends. */
+  then: string | null;
+  /** The value without the arrow part, as written. */
+  main: string;
+};
+
+/** "$500M" → { prefix "$", num 500, suffix "M" }; "3 days → hours" → main "3 days", then "→ hours". */
+export function parseCounter(value: string): Counter {
+  const [main, ...rest] = value.split(/\s*→\s*/);
+  const then = rest.length ? `→ ${rest.join(" → ")}` : null;
+  const m = main.match(/^(\D*?)(\d+(?:\.\d+)?)(.*)$/);
+  if (!m) return { prefix: main, num: null, decimals: 0, suffix: "", then, main };
+  return {
+    prefix: m[1],
+    num: parseFloat(m[2]),
+    decimals: (m[2].split(".")[1] ?? "").length,
+    suffix: m[3],
+    then,
+    main,
+  };
+}
 
 /** 0 at 2015, 1 at today. */
 export function yearToFrac(year: number, today: number) {

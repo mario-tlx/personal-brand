@@ -12,8 +12,12 @@ import {
   JOURNEY_VH,
   SCENES,
   buildStops,
+  counterT,
+  curveYDesktop,
   eduYear,
+  parseCounter,
   yearToFrac,
+  type Counter,
   type Stop,
 } from "@/lib/journey";
 import { motionState, resetMotionState } from "@/lib/motion-state";
@@ -21,15 +25,22 @@ import { motionState, resetMotionState } from "@/lib/motion-state";
 // The canvas loads after the HTML, so the words are readable before any 3D arrives.
 const Stage = dynamic(() => import("./Stage"), { ssr: false });
 
+/** How long the dot breathes alone, once the canvas is up, before the name appears. */
+const INTRO_HOLD_MS = 3000;
+/** If the canvas never arrives (no WebGL), show the name after this long anyway. */
+const INTRO_FALLBACK_MS = 5000;
+
 type Props = { content: SiteContent; today: number };
 
 const subscribeNoop = () => () => {};
 const isMotionMode = () => document.documentElement.classList.contains("motion");
 
 export function Journey({ content, today }: Props) {
-  const root = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLElement>(null);
+  const nav = useRef<HTMLElement>(null);
   const motion = useSyncExternalStore(subscribeNoop, isMotionMode, () => false);
   const [canvasReady, setCanvasReady] = useState(false);
+  const [introShown, setIntroShown] = useState(false);
 
   const roleFracs = useMemo(() => content.roles.map((r) => yearToFrac(r.start, today)), [content.roles, today]);
   const eduFracs = useMemo(
@@ -45,19 +56,31 @@ export function Journey({ content, today }: Props) {
       ),
     [content.roles, content.education, today],
   );
+  const counters = useMemo(() => content.numbers.map((n) => parseCounter(n.value)), [content.numbers]);
+  const markerTs = useMemo(() => counters.map((_, i) => counterT(i, counters.length)), [counters]);
+
+  // Intro: the dot breathes alone for a moment, then the name and tagline appear.
+  useEffect(() => {
+    if (!motion || introShown) return;
+    const id = setTimeout(() => setIntroShown(true), canvasReady ? INTRO_HOLD_MS : INTRO_FALLBACK_MS);
+    return () => clearTimeout(id);
+  }, [motion, canvasReady, introShown]);
 
   useEffect(() => {
-    if (!motion || !root.current) return;
+    if (!motion || !root.current || !nav.current) return;
+    const navEl = nav.current;
 
     gsap.registerPlugin(ScrollTrigger);
     ScrollTrigger.config({ ignoreMobileResize: true });
-    resetMotionState(content.roles.length, content.education.length);
+    resetMotionState(content.roles.length, content.education.length, counters.length);
 
-    const lenis = new Lenis();
+    const lenis = new Lenis({ anchors: true });
     lenis.on("scroll", ScrollTrigger.update);
     const raf = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(raf);
     gsap.ticker.lagSmoothing(0);
+
+    const rollEls = Array.from(root.current.querySelectorAll<HTMLElement>("[data-roll]"));
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
@@ -69,19 +92,22 @@ export function Journey({ content, today }: Props) {
           scrub: true,
         },
       });
-      buildDotScene(tl);
+      buildDotScene(tl, navEl);
       buildLineScene(tl, stops);
+      buildCurveScene(tl, counters, markerTs, rollEls, content.roles.length - 1);
       // The timeline spans exactly the built part of the journey.
       tl.set({}, {}, BUILT_UNTIL);
     }, root);
 
     return () => {
       ctx.revert();
+      // Counters were rewritten to "0" for the roll; put the real values back.
+      rollEls.forEach((el, i) => (el.textContent = counters[i]?.main ?? el.textContent));
       gsap.ticker.remove(raf);
       lenis.destroy();
-      resetMotionState(content.roles.length, content.education.length);
+      resetMotionState(content.roles.length, content.education.length, counters.length);
     };
-  }, [motion, stops, content.roles.length, content.education.length]);
+  }, [motion, stops, counters, markerTs, content.roles.length, content.education.length]);
 
   const words = content.quote.text.split(" ");
   const journeyStyle = {
@@ -92,9 +118,22 @@ export function Journey({ content, today }: Props) {
   return (
     <>
       <div className="grid-bg" aria-hidden />
-      {motion && <Stage roleFracs={roleFracs} eduFracs={eduFracs} onReady={() => setCanvasReady(true)} />}
+      {motion && (
+        <Stage roleFracs={roleFracs} eduFracs={eduFracs} markerTs={markerTs} onReady={() => setCanvasReady(true)} />
+      )}
 
-      <main ref={root} className="journey" style={journeyStyle}>
+      <header ref={nav} className="site-nav">
+        <a href="#top" className="site-nav-name">
+          {content.name}
+        </a>
+      </header>
+
+      <main
+        ref={root}
+        id="top"
+        className={`journey${introShown ? " intro-shown" : ""}`}
+        style={journeyStyle}
+      >
         <div className="journey-viewport">
           {/* Scene 0 — the dot */}
           <section className="scene scene-dot" data-scene="dot" aria-labelledby="name">
@@ -111,12 +150,15 @@ export function Journey({ content, today }: Props) {
             </blockquote>
             {/* Shown until the 3D dot takes over (and always without JS / in reduced motion). */}
             <span className={`dot-fallback${canvasReady ? " is-hidden" : ""}`} aria-hidden />
+            {/* Outer element: faded by scroll. Inner element: the timed intro. */}
             <div className="ident">
-              <h1 id="name">{content.name}</h1>
-              <p className="tagline">{content.tagline}</p>
+              <div className="ident-inner">
+                <h1 id="name">{content.name}</h1>
+                <p className="tagline">{content.tagline}</p>
+              </div>
             </div>
             <div className="scroll-cue" aria-hidden>
-              {content.ui.scroll}
+              <span className="scroll-cue-inner">{content.ui.scroll}</span>
             </div>
           </section>
 
@@ -161,16 +203,55 @@ export function Journey({ content, today }: Props) {
               ))}
             </ul>
           </section>
+
+          {/* Scene 2 — the curve */}
+          <section className="scene scene-curve" data-scene="curve" aria-labelledby="numbers">
+            <h2 id="numbers" className="scene-title">
+              {content.ui.numbers}
+            </h2>
+            <div className="leaders" aria-hidden>
+              {markerTs.map((t, i) => (
+                <span
+                  key={i}
+                  className="leader"
+                  data-leader={i}
+                  style={{ "--t": t, "--my": curveYDesktop(t) } as CSSProperties}
+                />
+              ))}
+            </div>
+            <ul className="numbers">
+              {content.numbers.map((n, i) => (
+                <li key={n.value} className="number" data-number={i} style={{ "--t": markerTs[i] } as CSSProperties}>
+                  <span className="number-value">
+                    <span data-roll={i}>{counters[i].main}</span>
+                    {counters[i].then && (
+                      <>
+                        {" "}
+                        <span className="number-then" data-then={i}>
+                          {counters[i].then}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                  <span className="number-label">{n.label}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
       </main>
     </>
   );
 }
 
-/** Scene 0 (0–8%): the quote writes in word by word, then the text clears for the line. */
-function buildDotScene(tl: gsap.core.Timeline) {
+/**
+ * Scene 0 (0–8%): the name fades as the quote writes in word by word; when the quote
+ * leaves, the navbar (with the name) arrives and stays.
+ */
+function buildDotScene(tl: gsap.core.Timeline, navEl: HTMLElement) {
   const { end } = SCENES.dot;
   tl.to(".scroll-cue", { opacity: 0, duration: 0.01 }, 0);
+  tl.to(".ident", { opacity: 0, y: 8, duration: 0.02, ease: "power1.inOut" }, 0.004);
   tl.fromTo(
     ".word",
     { opacity: 0, y: 10 },
@@ -178,7 +259,8 @@ function buildDotScene(tl: gsap.core.Timeline) {
     0.004,
   );
   tl.fromTo(".quote footer", { opacity: 0 }, { opacity: 1, duration: 0.006 }, 0.046);
-  tl.to([".quote", ".ident"], { opacity: 0, duration: 0.014 }, end - 0.016);
+  tl.to(".quote", { opacity: 0, duration: 0.014 }, end - 0.016);
+  tl.fromTo(navEl, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01 }, end - 0.008);
 }
 
 /**
@@ -228,4 +310,71 @@ function buildLineScene(tl: gsap.core.Timeline, stops: Stop[]) {
 
   // Last run: the playhead reaches today.
   tl.to(motionState, { dotFrac: 1, duration: 0.4 * L, ease: "power1.inOut" }, first + stops.length * L);
+}
+
+/**
+ * Scene 2 (25–38%): the career text clears, the dot rewinds to 2015, the axis bends into a
+ * rising chart line, then the dot climbs it. At each counter the number rolls up from 0;
+ * the steep part of the curve turns brown behind the dot.
+ */
+function buildCurveScene(
+  tl: gsap.core.Timeline,
+  counters: Counter[],
+  markerTs: number[],
+  rollEls: HTMLElement[],
+  lastRole: number,
+) {
+  const { start, end } = SCENES.curve;
+
+  // Clear scene 1: last card, labels, ticks and markers.
+  tl.to([`[data-role="${lastRole}"]`, ".edu-label", ".axis-labels > span"], { opacity: 0, duration: 0.006 }, start);
+  tl.to([...motionState.ticks, ...motionState.edu], { v: 0, duration: 0.006, ease: "power1.in" }, start + 0.002);
+
+  // Rewind to 2015, then bend.
+  tl.to(motionState, { dotFrac: 0, duration: 0.012 }, start + 0.009);
+  tl.to(motionState, { bend: 1, duration: 0.02 }, start + 0.022);
+  tl.to(motionState, { glow: 1, duration: 0.004 }, start + 0.044);
+
+  const first = start + 0.046;
+  const segments = counters.length + 1; // every counter, then the run to the top
+  const L = (end - 0.001 - first) / segments;
+
+  counters.forEach((c, i) => {
+    const s = first + i * L;
+    tl.to(motionState, { dotFrac: markerTs[i], duration: 0.34 * L, ease: "power1.inOut" }, s);
+    tl.to(motionState.markers[i], { v: 1, duration: 0.08 * L, ease: "power1.out" }, s + 0.34 * L);
+    tl.fromTo(`[data-leader="${i}"]`, { opacity: 0 }, { opacity: 1, duration: 0.12 * L }, s + 0.36 * L);
+    tl.fromTo(
+      `[data-number="${i}"]`,
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, duration: 0.14 * L, ease: "power2.out" },
+      s + 0.4 * L,
+    );
+
+    const el = rollEls[i];
+    if (el && c.num !== null) {
+      const format = (n: number) => `${c.prefix}${n.toFixed(c.decimals)}${c.suffix}`;
+      const counter = { n: 0 };
+      el.textContent = format(0);
+      tl.to(
+        counter,
+        {
+          n: c.num,
+          duration: 0.32 * L,
+          ease: "power1.out",
+          onUpdate: () => {
+            const step = 10 ** -c.decimals;
+            el.textContent = format(Math.round(counter.n / step) * step);
+          },
+        },
+        s + 0.44 * L,
+      );
+    }
+    if (c.then) {
+      tl.fromTo(`[data-then="${i}"]`, { opacity: 0, x: -6 }, { opacity: 1, x: 0, duration: 0.1 * L }, s + 0.78 * L);
+    }
+  });
+
+  // Last run: the dot reaches the top of the curve (today).
+  tl.to(motionState, { dotFrac: 1, duration: 0.4 * L, ease: "power1.inOut" }, first + counters.length * L);
 }

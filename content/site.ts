@@ -40,6 +40,7 @@ const en = {
     scroll: "Scroll",
     career: "Career",
     education: "Education",
+    numbers: "In numbers",
     axisStart: "2015",
     axisEnd: "Today",
   },

@@ -19,15 +19,24 @@ export const motionState = {
   ticks: [] as Level[],
   /** 0 → 1 growth of each education marker. */
   edu: [] as Level[],
+  /** Scene 2: the axis bends into the rising chart line (0 = straight axis, 1 = curve). */
+  bend: 0,
+  /** Scene 2: brown glow on the steep part of the curve behind the dot (0 → 1). */
+  glow: 0,
+  /** 0 → 1 growth of each counter's marker on the curve. */
+  markers: [] as Level[],
 };
 
 export const INITIAL_DOT_R = 8;
 
-export function resetMotionState(roleCount: number, eduCount: number) {
+export function resetMotionState(roleCount: number, eduCount: number, markerCount: number) {
   motionState.gather = 0;
   motionState.lineLen = 0;
   motionState.dotFrac = 0.5;
   motionState.dotR = INITIAL_DOT_R;
   motionState.ticks = Array.from({ length: roleCount }, () => ({ v: 0 }));
   motionState.edu = Array.from({ length: eduCount }, () => ({ v: 0 }));
+  motionState.bend = 0;
+  motionState.glow = 0;
+  motionState.markers = Array.from({ length: markerCount }, () => ({ v: 0 }));
 }
