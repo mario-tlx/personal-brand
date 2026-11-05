@@ -17,6 +17,18 @@ export type Role = {
   line: string;
 };
 
+export type Quadrant = {
+  id: string;
+  title: string;
+  /** Column on the plane: 0 = less data and AI depth, 1 = more. */
+  x: 0 | 1;
+  /** Row on the plane: 0 = less finance depth, 1 = more. */
+  y: 0 | 1;
+  /** The quadrant that fills brown last ("Where I play"). */
+  highlight?: boolean;
+  items: string[];
+};
+
 export type Education = {
   year: number;
   degree: string;
@@ -41,6 +53,7 @@ const en = {
     career: "Career",
     education: "Education",
     numbers: "In numbers",
+    skills: "Skills",
     axisStart: "2015",
     axisEnd: "Today",
   },
@@ -112,7 +125,64 @@ const en = {
     { value: "3 days → hours", label: "forecast consolidation, killed 80% of manual errors" },
   ],
 
-  // Scene 3 (skills plane) is added when that scene is built (source: Step 1, "Skills map").
+  /**
+   * Scene 3 (the plane). Source: Step 1, "Skills map". Quadrants play in this order;
+   * the highlighted one comes last.
+   */
+  skills: {
+    xAxis: "Data and AI depth",
+    yAxis: "Finance depth",
+    quadrants: [
+      {
+        id: "tools",
+        title: "Everyday tools",
+        x: 0,
+        y: 0,
+        items: ["Excel (advanced), VBA, Power BI", "Microsoft Dynamics, SAP, NetSuite", "Bloomberg"],
+      },
+      {
+        id: "finance",
+        title: "Finance core",
+        x: 0,
+        y: 1,
+        items: [
+          "FP&A: budget, forecast, long-range plan",
+          "Deal pricing, hiring and spend approvals",
+          "Rev rec (ASC 606), US GAAP, IFRS",
+          "13-week rolling cash forecast",
+          "Backlog, signings and quota models",
+        ],
+      },
+      {
+        id: "build",
+        title: "Data and AI build",
+        x: 1,
+        y: 0,
+        items: [
+          "Python, SQL, R; MS in Data Science",
+          "LightGBM, NLP, ARIMA and GARCH models",
+          "WhatsApp + LLM agents (RAG)",
+          "Next.js, TypeScript, Vercel, Railway",
+          "Azure, Snowflake, Databricks",
+        ],
+      },
+      {
+        id: "play",
+        title: "Where I play",
+        x: 1,
+        y: 1,
+        highlight: true,
+        items: [
+          "Forecast models taken to production",
+          "~50% of finance work automated with AI",
+          "Azure platform with revenue and margin alerts, built in Cursor",
+          "Budgeting tokens and model mix",
+          "LLMs to interrogate forecast packages",
+        ],
+      },
+    ] satisfies Quadrant[],
+  },
+
 
   /** Scene 4 (the cube). High level only; no internals or client names. */
   projects: [

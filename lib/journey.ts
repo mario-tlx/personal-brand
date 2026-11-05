@@ -14,7 +14,7 @@ export const SCENES = {
 } as const;
 
 /** Scenes built so far end here; the page's scroll length covers only this part. */
-export const BUILT_UNTIL = SCENES.curve.end;
+export const BUILT_UNTIL = SCENES.plane.end;
 
 /** Scroll length of the whole journey (0 → 1), in viewport heights. Phone is shorter. */
 export const JOURNEY_VH = { desktop: 2400, phone: 1800 };
@@ -41,6 +41,17 @@ export const CURVE = {
   k: 2.6,
   desktop: { x0: 0.1, x1: 0.9, y0: 0.8, y1: 0.36 },
   phone: { pad: 24, y0: 0.9, y1: 0.62 },
+} as const;
+
+/**
+ * Scene 3: the skills plane. The line lies down as its x-axis (Data and AI depth) and a
+ * second axis (Finance depth) swings up from the origin, bottom-left. globals.css uses the
+ * same numbers (search for "plane layout") — keep both in sync.
+ * desktop: fractions of the viewport. phone: x in pixels from each side, y fractions.
+ */
+export const PLANE = {
+  desktop: { x0: 0.1, x1: 0.9, yTop: 0.15, yBottom: 0.86 },
+  phone: { left: 30, right: 12, yTop: 0.12, yBottom: 0.9 },
 } as const;
 
 /** 0 → 1 rise of the chart line at t (0 = left end, 1 = right end). */

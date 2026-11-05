@@ -6,7 +6,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import "lenis/dist/lenis.css";
-import type { SiteContent } from "@/content/site";
+import type { Quadrant, SiteContent } from "@/content/site";
 import {
   BUILT_UNTIL,
   JOURNEY_VH,
@@ -95,6 +95,7 @@ export function Journey({ content, today }: Props) {
       buildDotScene(tl, navEl);
       buildLineScene(tl, stops);
       buildCurveScene(tl, counters, markerTs, rollEls, content.roles.length - 1);
+      buildPlaneScene(tl, content.skills.quadrants);
       // The timeline spans exactly the built part of the journey.
       tl.set({}, {}, BUILT_UNTIL);
     }, root);
@@ -107,7 +108,7 @@ export function Journey({ content, today }: Props) {
       lenis.destroy();
       resetMotionState(content.roles.length, content.education.length, counters.length);
     };
-  }, [motion, stops, counters, markerTs, content.roles.length, content.education.length]);
+  }, [motion, stops, counters, markerTs, content.roles.length, content.education.length, content.skills.quadrants]);
 
   const words = content.quote.text.split(" ");
   const journeyStyle = {
@@ -238,6 +239,43 @@ export function Journey({ content, today }: Props) {
               ))}
             </ul>
           </section>
+
+          {/* Scene 3 — the plane */}
+          <section className="scene scene-plane" data-scene="plane" aria-labelledby="skills">
+            <h2 id="skills" className="scene-title">
+              {content.ui.skills}
+            </h2>
+            <div className="plane-labels">
+              <span className="plane-x" data-plane-label>
+                {content.skills.xAxis} →
+              </span>
+              <span className="plane-y" data-plane-label>
+                {content.skills.yAxis} →
+              </span>
+            </div>
+            <div className="quadrants">
+              {content.skills.quadrants.map((q) => (
+                <div
+                  key={q.id}
+                  className={`quadrant${q.highlight ? " is-highlight" : ""}`}
+                  data-quadrant={q.id}
+                  data-qx={q.x}
+                  data-qy={q.y}
+                  style={{ "--qx": q.x, "--qy": q.y } as CSSProperties}
+                >
+                  <h3 className="quadrant-title">{q.title}</h3>
+                  <ul className="skills">
+                    {q.items.map((item) => (
+                      <li key={item} className="skill">
+                        <span className="skill-dot" aria-hidden />
+                        <span className="skill-text">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       </main>
     </>
@@ -251,7 +289,7 @@ export function Journey({ content, today }: Props) {
 function buildDotScene(tl: gsap.core.Timeline, navEl: HTMLElement) {
   const { end } = SCENES.dot;
   tl.to(".scroll-cue", { opacity: 0, duration: 0.01 }, 0);
-  tl.to(".ident", { opacity: 0, y: 8, duration: 0.02, ease: "power1.inOut" }, 0.004);
+  tl.to(".ident", { autoAlpha: 0, y: 8, duration: 0.02, ease: "power1.inOut" }, 0.004);
   tl.fromTo(
     ".word",
     { opacity: 0, y: 10 },
@@ -259,7 +297,7 @@ function buildDotScene(tl: gsap.core.Timeline, navEl: HTMLElement) {
     0.004,
   );
   tl.fromTo(".quote footer", { opacity: 0 }, { opacity: 1, duration: 0.006 }, 0.046);
-  tl.to(".quote", { opacity: 0, duration: 0.014 }, end - 0.016);
+  tl.to(".quote", { autoAlpha: 0, duration: 0.014 }, end - 0.016);
   tl.fromTo(navEl, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01 }, end - 0.008);
 }
 
@@ -288,12 +326,12 @@ function buildLineScene(tl: gsap.core.Timeline, stops: Stop[]) {
     if (stop.kind === "role") {
       tl.to(motionState.ticks[stop.index], { v: 1, duration: 0.06 * L, ease: "power1.out" }, s + 0.3 * L);
       if (shownCard !== null) {
-        tl.to(`[data-role="${shownCard}"]`, { opacity: 0, y: -8, duration: 0.08 * L }, s + 0.36 * L);
+        tl.to(`[data-role="${shownCard}"]`, { autoAlpha: 0, y: -8, duration: 0.08 * L }, s + 0.36 * L);
       }
       tl.fromTo(
         `[data-role="${stop.index}"]`,
-        { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 0.14 * L, ease: "power2.out" },
+        { autoAlpha: 0, y: 14 },
+        { autoAlpha: 1, y: 0, duration: 0.14 * L, ease: "power2.out" },
         s + 0.44 * L,
       );
       shownCard = stop.index;
@@ -301,8 +339,8 @@ function buildLineScene(tl: gsap.core.Timeline, stops: Stop[]) {
       tl.to(motionState.edu[stop.index], { v: 1, duration: 0.06 * L, ease: "power1.out" }, s + 0.3 * L);
       tl.fromTo(
         `[data-edu="${stop.index}"]`,
-        { opacity: 0, y: 6 },
-        { opacity: 1, y: 0, duration: 0.14 * L, ease: "power2.out" },
+        { autoAlpha: 0, y: 6 },
+        { autoAlpha: 1, y: 0, duration: 0.14 * L, ease: "power2.out" },
         s + 0.36 * L,
       );
     }
@@ -327,7 +365,7 @@ function buildCurveScene(
   const { start, end } = SCENES.curve;
 
   // Clear scene 1: last card, labels, ticks and markers.
-  tl.to([`[data-role="${lastRole}"]`, ".edu-label", ".axis-labels > span"], { opacity: 0, duration: 0.006 }, start);
+  tl.to([`[data-role="${lastRole}"]`, ".edu-label", ".axis-labels > span"], { autoAlpha: 0, duration: 0.006 }, start);
   tl.to([...motionState.ticks, ...motionState.edu], { v: 0, duration: 0.006, ease: "power1.in" }, start + 0.002);
 
   // Rewind to 2015, then bend.
@@ -346,8 +384,8 @@ function buildCurveScene(
     tl.fromTo(`[data-leader="${i}"]`, { opacity: 0 }, { opacity: 1, duration: 0.12 * L }, s + 0.36 * L);
     tl.fromTo(
       `[data-number="${i}"]`,
-      { opacity: 0, y: 10 },
-      { opacity: 1, y: 0, duration: 0.14 * L, ease: "power2.out" },
+      { autoAlpha: 0, y: 10 },
+      { autoAlpha: 1, y: 0, duration: 0.14 * L, ease: "power2.out" },
       s + 0.4 * L,
     );
 
@@ -377,4 +415,63 @@ function buildCurveScene(
 
   // Last run: the dot reaches the top of the curve (today).
   tl.to(motionState, { dotFrac: 1, duration: 0.4 * L, ease: "power1.inOut" }, first + counters.length * L);
+}
+
+/**
+ * Scene 3 (38–55%): the counters clear, the curve lies down as the x-axis while the dot
+ * slides to the origin, and the second axis swings up around it. The dividers draw in,
+ * then each quadrant's skill dots fall into place, one quadrant at a time. The highlighted
+ * quadrant ("Where I play") comes last and fills brown.
+ */
+function buildPlaneScene(tl: gsap.core.Timeline, quadrants: Quadrant[]) {
+  const { start, end } = SCENES.plane;
+
+  // Clear scene 2.
+  tl.to([".number", ".leader"], { autoAlpha: 0, duration: 0.006 }, start);
+  tl.to([...motionState.markers], { v: 0, duration: 0.006, ease: "power1.in" }, start + 0.001);
+  tl.to(motionState, { glow: 0, duration: 0.006 }, start + 0.001);
+
+  // The curve lies down as the x-axis; the dot slides to the origin.
+  tl.to(motionState, { flat: 1, dotFrac: 0, duration: 0.017 }, start + 0.009);
+  // The second axis swings up.
+  tl.to(motionState, { swing: 1, duration: 0.018, ease: "power2.inOut" }, start + 0.028);
+  tl.fromTo("[data-plane-label]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.006 }, start + 0.047);
+  tl.to(motionState, { grid: 1, duration: 0.008 }, start + 0.05);
+
+  const first = start + 0.06;
+  const fillAt = end - 0.016;
+  const Q = (fillAt - first) / quadrants.length;
+
+  quadrants.forEach((q, k) => {
+    const s = first + k * Q;
+    const sel = `[data-quadrant="${q.id}"]`;
+    tl.fromTo(`${sel} .quadrant-title`, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.18 * Q }, s);
+    // Each dot falls into place, then its words arrive.
+    const n = q.items.length;
+    const step = (0.55 * Q) / Math.max(n, 1);
+    for (let i = 0; i < n; i++) {
+      const t = s + 0.16 * Q + i * step;
+      const item = `${sel} .skill:nth-child(${i + 1})`;
+      tl.fromTo(
+        `${item} .skill-dot`,
+        { autoAlpha: 0, y: -36 },
+        { autoAlpha: 1, y: 0, duration: 0.16 * Q, ease: "power2.in" },
+        t,
+      );
+      tl.fromTo(`${item} .skill-text`, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.14 * Q }, t + 0.14 * Q);
+    }
+  });
+
+  // "Where I play" fills brown last.
+  const hl = quadrants.find((q) => q.highlight);
+  if (hl) {
+    const sel = `[data-quadrant="${hl.id}"]`;
+    tl.to(
+      sel,
+      { backgroundColor: "rgba(192, 138, 78, 0.12)", borderColor: "rgba(192, 138, 78, 0.9)", duration: 0.008 },
+      fillAt,
+    );
+    tl.to(`${sel} .quadrant-title`, { color: "#C08A4E", duration: 0.008 }, fillAt);
+    tl.to(`${sel} .skill-dot`, { backgroundColor: "#C08A4E", duration: 0.008 }, fillAt + 0.002);
+  }
 }

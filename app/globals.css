@@ -312,6 +312,114 @@ body {
   color: rgb(236 230 218 / 0.72);
 }
 
+/* Skills, as a 2 × 2 grid laid out like the plane */
+.scene-plane {
+  align-items: stretch;
+  text-align: left;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.plane-labels {
+  display: none;
+}
+
+.quadrants {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.quadrant[data-qx="0"] {
+  grid-column: 1;
+}
+
+.quadrant[data-qx="1"] {
+  grid-column: 2;
+}
+
+.quadrant[data-qy="1"] {
+  grid-row: 1;
+}
+
+.quadrant[data-qy="0"] {
+  grid-row: 2;
+}
+
+@media (max-width: 639px) {
+  .quadrants {
+    grid-template-columns: 1fr;
+  }
+
+  .quadrant[data-qx] {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+.quadrant {
+  box-sizing: border-box;
+  padding: 18px 20px;
+  border: 1px solid var(--color-grid);
+  border-radius: 4px;
+}
+
+.quadrant.is-highlight {
+  border-color: var(--color-brown);
+  background: rgb(192 138 78 / 0.12);
+}
+
+.quadrant-title {
+  margin: 0 0 0.7rem;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 1.25rem;
+  color: var(--color-ink);
+}
+
+.is-highlight .quadrant-title {
+  color: var(--color-brown);
+}
+
+.skills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.skill {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.skill-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-blue);
+  transform: translateY(-1px);
+}
+
+.is-highlight .skill-dot {
+  background: var(--color-brown);
+}
+
+.skill-text {
+  color: rgb(236 230 218 / 0.82);
+  transition: color 0.2s ease;
+}
+
+.skill:hover .skill-text {
+  color: var(--color-ink);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -353,6 +461,11 @@ body {
   padding: 0;
   display: block;
   max-width: none;
+  pointer-events: none;
+}
+
+.motion .scene :is(.quote, .ident, .role-card, .edu-label, .number, .quadrant-title, .skill) {
+  pointer-events: auto;
 }
 
 /* Scene 0: quote above the dot, name below it */
@@ -506,6 +619,7 @@ body {
   border-radius: 4px;
   background: rgb(14 20 32 / 0.88);
   opacity: 0;
+  visibility: hidden;
 }
 
 .motion .role-title {
@@ -523,6 +637,7 @@ body {
 
 .motion .edu-label {
   opacity: 0;
+  visibility: hidden;
 }
 
 .motion .edu-school {
@@ -565,6 +680,7 @@ body {
   margin-left: -7.5%;
   text-align: center;
   opacity: 0;
+  visibility: hidden;
 }
 
 .motion .number-value {
@@ -579,6 +695,80 @@ body {
 
 .motion .number-label {
   font-size: 0.8rem;
+}
+
+/* Scene 3: the plane. plane layout — keep in sync with PLANE in lib/journey.ts
+   desktop: x from 10% to 90%, y from 15% (top) to 86% (x-axis)
+   phone:   x from 30px to 100% - 12px, y from 12% to 90% */
+.motion .scene-plane {
+  --px0: 10%;
+  --px1: 90%;
+  --pyt: 15%;
+  --pyb: 86%;
+}
+
+.motion .quadrants {
+  display: block;
+}
+
+.motion .quadrant {
+  position: absolute;
+  left: calc(var(--px0) + var(--qx) * (var(--px1) - var(--px0)) / 2);
+  top: calc(var(--pyt) + (1 - var(--qy)) * (var(--pyb) - var(--pyt)) / 2);
+  width: calc((var(--px1) - var(--px0)) / 2);
+  height: calc((var(--pyb) - var(--pyt)) / 2);
+  padding: clamp(14px, 3.2vh, 28px) clamp(16px, 2.4vw, 32px);
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.motion .quadrant.is-highlight {
+  border-color: transparent;
+  background: transparent;
+}
+
+.motion .is-highlight .quadrant-title {
+  color: var(--color-ink);
+}
+
+.motion .is-highlight .skill-dot {
+  background: var(--color-blue);
+}
+
+.motion .quadrant-title,
+.motion .skill-dot,
+.motion .skill-text,
+.motion .plane-labels > span {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .plane-labels {
+  display: block;
+}
+
+.motion .plane-labels > span {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+  white-space: nowrap;
+}
+
+.motion .plane-x {
+  right: calc(100% - var(--px1));
+  top: calc(var(--pyb) + 12px);
+}
+
+.motion .plane-y {
+  left: calc(var(--px0) - 26px);
+  top: var(--pyt);
+  transform-origin: 0 0;
+  transform: rotate(-90deg) translateX(-100%);
 }
 
 @media (max-width: 767px) {
@@ -670,5 +860,45 @@ body {
     margin-top: 0;
     font-size: 0.78rem;
     line-height: 1.35;
+  }
+
+  .motion .scene-plane {
+    --px0: 30px;
+    --px1: calc(100% - 12px);
+    --pyt: 12%;
+    --pyb: 90%;
+  }
+
+  .motion .quadrant {
+    padding: 12px 10px 10px 12px;
+  }
+
+  .motion .quadrant-title {
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+
+  .motion .skills {
+    gap: 0.35rem;
+  }
+
+  .motion .skill {
+    gap: 7px;
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .motion .skill-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  .motion .plane-labels > span {
+    font-size: 0.62rem;
+  }
+
+  .motion .plane-y {
+    left: 8px;
   }
 }

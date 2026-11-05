@@ -12,11 +12,12 @@ import {
   type Mesh,
   type MeshBasicMaterial,
 } from "three";
-import { AXIS, CURVE, PHONE_MAX_WIDTH, growth, growthSlope } from "@/lib/journey";
+import { AXIS, CURVE, PHONE_MAX_WIDTH, PLANE, growth, growthSlope } from "@/lib/journey";
 import { motionState } from "@/lib/motion-state";
 
 const BLUE = "#4FA3D9";
 const BROWN = "#C08A4E";
+const QUIET = "#6B7A90";
 
 const LINE_PX = 2;
 const TICK_PX = 14;
@@ -69,7 +70,7 @@ function smoothstep(edge0: number, edge1: number, x: number) {
 
 /**
  * The dot. One object that morphs scene to scene: dot → time axis (with role ticks and
- * education markers) → rising chart line. Children are laid out in CSS pixels (y down);
+ * education markers) → rising chart line → the two axes of the skills plane. Children are laid out in CSS pixels (y down);
  * the parent group maps pixels onto the z = 0 plane.
  */
 function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady: () => void }) {
@@ -89,9 +90,13 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
   const ticks = useRef<(Mesh | null)[]>([]);
   const edus = useRef<(Mesh | null)[]>([]);
   const markers = useRef<(Mesh | null)[]>([]);
+  const yAxis = useRef<Mesh>(null);
+  const gridV = useRef<Mesh>(null);
+  const gridH = useRef<Mesh>(null);
 
   useFrame(({ clock }) => {
     if (!group.current || !dot.current || !halo.current || !line.current) return;
+    if (!yAxis.current || !gridV.current || !gridH.current) return;
     const W = size.width;
     const H = size.height;
     const phone = W <= PHONE_MAX_WIDTH;
@@ -115,10 +120,30 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
     const ox = (W / 2 - axisX(0.5)) * k;
     const oy = (H / 2 - axisY(0.5)) * k;
 
-    // A point on the line: the straight axis, bent toward the curve by `bend`.
+    // The skills plane: origin bottom-left, x-axis along the bottom.
+    const plane = phone
+      ? { x0: PLANE.phone.left, x1: W - PLANE.phone.right, yt: H * PLANE.phone.yTop, yb: H * PLANE.phone.yBottom }
+      : {
+          x0: W * PLANE.desktop.x0,
+          x1: W * PLANE.desktop.x1,
+          yt: H * PLANE.desktop.yTop,
+          yb: H * PLANE.desktop.yBottom,
+        };
+
+    // A point on the line: the straight axis, bent toward the curve by `bend`,
+    // then laid down as the plane's x-axis by `flat`.
     const bend = motionState.bend;
-    const px = (t: number) => axisX(t) + (bend ? (curveX(t) - axisX(t)) * bend : 0) + ox;
-    const py = (t: number) => axisY(t) + (bend ? (curveY(t) - axisY(t)) * bend : 0) + oy;
+    const flat = motionState.flat;
+    const bx = (t: number) => axisX(t) + (bend ? (curveX(t) - axisX(t)) * bend : 0);
+    const by = (t: number) => axisY(t) + (bend ? (curveY(t) - axisY(t)) * bend : 0);
+    const px = (t: number) => {
+      const x = bx(t);
+      return (flat ? x + (plane.x0 + t * (plane.x1 - plane.x0) - x) * flat : x) + ox;
+    };
+    const py = (t: number) => {
+      const y = by(t);
+      return (flat ? y + (plane.yb - y) * flat : y) + oy;
+    };
 
     // The line (axis, then curve), as a ribbon of LINE_PX width.
     const len = motionState.lineLen;
@@ -204,6 +229,32 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
       m.scale.setScalar(MARKER_PX * v);
     });
 
+    // The second axis swings up around the origin, from lying on the x-axis to upright.
+    const swing = motionState.swing;
+    yAxis.current.visible = swing > 0.001;
+    if (yAxis.current.visible) {
+      const theta = (swing * Math.PI) / 2;
+      const L = plane.yb - plane.yt;
+      yAxis.current.position.set(plane.x0 + (Math.cos(theta) * L) / 2, plane.yb - (Math.sin(theta) * L) / 2, 0.005);
+      yAxis.current.rotation.z = -theta;
+      yAxis.current.scale.set(L, LINE_PX, 1);
+    }
+
+    // Quadrant dividers: the vertical one grows up from the x-axis, the horizontal one
+    // grows right from the y-axis.
+    const grid = motionState.grid;
+    gridV.current.visible = gridH.current.visible = grid > 0.001;
+    if (grid > 0.001) {
+      const xm = (plane.x0 + plane.x1) / 2;
+      const ym = (plane.yt + plane.yb) / 2;
+      const lv = (plane.yb - plane.yt) * grid;
+      const lh = (plane.x1 - plane.x0) * grid;
+      gridV.current.position.set(xm, plane.yb - lv / 2, 0.004);
+      gridV.current.scale.set(1, lv, 1);
+      gridH.current.position.set(plane.x0 + lh / 2, ym, 0.004);
+      gridH.current.scale.set(lh, 1, 1);
+    }
+
     // The dot, and its slow breathing halo (the only thing on a timer).
     const dx = px(motionState.dotFrac);
     const dy = py(motionState.dotFrac);
@@ -249,6 +300,20 @@ function DotObject({ roleFracs, eduFracs, markerTs, onReady }: Props & { onReady
           <meshBasicMaterial color={BLUE} side={DoubleSide} />
         </mesh>
       ))}
+
+      <mesh ref={yAxis} visible={false}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial color={BLUE} side={DoubleSide} />
+      </mesh>
+
+      <mesh ref={gridV} visible={false}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial color={QUIET} side={DoubleSide} transparent opacity={0.55} />
+      </mesh>
+      <mesh ref={gridH} visible={false}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial color={QUIET} side={DoubleSide} transparent opacity={0.55} />
+      </mesh>
 
       <mesh ref={halo}>
         <ringGeometry args={[0.82, 1, 64]} />

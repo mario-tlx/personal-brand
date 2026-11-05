@@ -25,6 +25,12 @@ export const motionState = {
   glow: 0,
   /** 0 → 1 growth of each counter's marker on the curve. */
   markers: [] as Level[],
+  /** Scene 3: the line lies down as the plane's x-axis (0 = curve, 1 = flat x-axis). */
+  flat: 0,
+  /** Scene 3: the second axis swings up from the origin (0 = lying on the x-axis, 1 = upright). */
+  swing: 0,
+  /** Scene 3: the quadrant dividers draw in (0 → 1). */
+  grid: 0,
 };
 
 export const INITIAL_DOT_R = 8;
@@ -39,4 +45,7 @@ export function resetMotionState(roleCount: number, eduCount: number, markerCoun
   motionState.bend = 0;
   motionState.glow = 0;
   motionState.markers = Array.from({ length: markerCount }, () => ({ v: 0 }));
+  motionState.flat = 0;
+  motionState.swing = 0;
+  motionState.grid = 0;
 }
