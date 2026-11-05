@@ -29,6 +29,8 @@ export type Quadrant = {
   items: string[];
 };
 
+export type DrawingId = "basketball" | "painting" | "orbit" | "book" | "sculpture";
+
 export type Education = {
   year: number;
   degree: string;
@@ -59,6 +61,8 @@ const en = {
     projectKicker: "Project",
     viewLink: "View on GitHub",
     close: "Close",
+    beyond: "Beyond work",
+    photoPlaceholder: "Photo",
     axisStart: "2015",
     axisEnd: "Today",
   },
@@ -213,8 +217,20 @@ const en = {
     },
   ],
 
-  /** Scene 5 (beyond work). Photo is a placeholder until Mario adds it. */
-  interests: ["Basketball", "Art history and classical art", "Reading the classics", "Physics"],
+  /**
+   * Scene 5 (beyond work). Interests from Step 1 (basketball, art history and classical art,
+   * the classics, physics), one line drawing each, placed clockwise from the top around the
+   * photo. The photo is a placeholder until Mario adds it.
+   */
+  beyond: {
+    drawings: [
+      { id: "basketball", caption: "Basketball" },
+      { id: "painting", caption: "Art history" },
+      { id: "orbit", caption: "Physics" },
+      { id: "book", caption: "Reading the classics" },
+      { id: "sculpture", caption: "Classical art" },
+    ] satisfies { id: DrawingId; caption: string }[],
+  },
 
   /** Scene 6 (back to a dot). */
   closing: "The next data point is yours.",

@@ -15,7 +15,7 @@ import {
   type Mesh,
   type MeshBasicMaterial,
 } from "three";
-import { AXIS, CUBE, CURVE, PHONE_MAX_WIDTH, PLANE, growth, growthSlope } from "@/lib/journey";
+import { AXIS, BEYOND, CUBE, CURVE, PHONE_MAX_WIDTH, PLANE, beyondSlot, growth, growthSlope } from "@/lib/journey";
 import { motionState } from "@/lib/motion-state";
 
 const BLUE = "#4FA3D9";
@@ -63,6 +63,7 @@ const EUL = new Euler(0, 0, 0, "XYZ");
 const VA = new Vector3();
 const VB = new Vector3();
 const VUP = new Vector3(0, 1, 0);
+const VC = new Vector3();
 
 type Props = {
   roleFracs: number[];
@@ -71,6 +72,9 @@ type Props = {
   projectCount: number;
   /** Project labels in the HTML layer; the canvas keeps each one on its point. */
   anchors: RefObject<(HTMLElement | null)[]>;
+  /** Scene 5: which drawing slot the dot settles in (the orbit's center), and how many slots. */
+  restSlot: number;
+  slotCount: number;
 };
 
 /** The one fixed canvas behind the page for the whole scroll. */
@@ -116,7 +120,7 @@ function smoothstep(edge0: number, edge1: number, x: number) {
 /**
  * The dot. One object that morphs scene to scene: dot → time axis (with role ticks and
  * education markers) → rising chart line → the two axes of the skills plane → a wireframe
- * cube. Flat parts are laid out in CSS pixels (y down) in a group that maps pixels onto the
+ * cube that breaks apart, leaving the dot at the center of the orbit drawing. Flat parts are laid out in CSS pixels (y down) in a group that maps pixels onto the
  * z = 0 plane; the cube lives in world space and is projected back to pixels for the dot,
  * the project points and their HTML labels.
  */
@@ -126,6 +130,8 @@ function DotObject({
   markerTs,
   projectCount,
   anchors,
+  restSlot,
+  slotCount,
   onReady,
 }: Props & { onReady: () => void }) {
   const size = useThree((s) => s.size);
@@ -336,12 +342,15 @@ function DotObject({
     M.multiply(M2.makeScale(A, B, C));
 
     const th = LINE_PX * kpx;
+    const shatter = motionState.shatter;
+    VC.set(0, 0, 0.5).applyMatrix4(M); // the cube's center, in world space
     EDGES.forEach((e, i) => {
       const mesh = edges.current[i];
       if (!mesh) return;
       const grow = e.kind === "grow" ? motionState.close : 1;
       mesh.visible =
         cubeOn &&
+        shatter < 0.999 &&
         (e.kind === "axis" || (e.kind === "grow" && grow > 0.001) || (e.kind === "up" && motionState.extrude > 0.001));
       if (!mesh.visible) return;
       VA.set(e.a[0], e.a[1], e.a[2]).applyMatrix4(M);
@@ -350,10 +359,17 @@ function DotObject({
         e.a[1] + (e.b[1] - e.a[1]) * grow,
         e.a[2] + (e.b[2] - e.a[2]) * grow,
       ).applyMatrix4(M);
-      const l = VA.distanceTo(VB);
+      const l = VA.distanceTo(VB) * (1 - 0.7 * shatter);
       mesh.position.copy(VA).add(VB).multiplyScalar(0.5);
       if (l > 1e-6) mesh.quaternion.setFromUnitVectors(VUP, VB.sub(VA).normalize());
       mesh.scale.set(th, Math.max(l, 1e-4), th);
+      if (shatter > 0) {
+        // Fly outward from the cube's center.
+        VB.copy(mesh.position).sub(VC);
+        if (VB.lengthSq() < 1e-8) VB.set(0, 1, 0);
+        mesh.position.addScaledVector(VB.normalize(), shatter * S * 1.1);
+      }
+      (mesh.material as MeshBasicMaterial).opacity = 1 - shatter;
     });
 
     // Cube coordinates → screen pixels.
@@ -401,6 +417,12 @@ function DotObject({
         from[2] + (to[2] - from[2]) * f,
       ]);
     }
+    const rest = motionState.dotRest;
+    if (rest > 0 && slotCount > 0) {
+      const slot = beyondSlot(restSlot, slotCount, phone ? BEYOND.phone : BEYOND.desktop);
+      dx += (slot.x * W - dx) * rest;
+      dy += (slot.y * H - dy) * rest;
+    }
     const r = motionState.dotR;
     dot.current.position.set(dx, dy, 0.03);
     dot.current.scale.setScalar(r);
@@ -424,7 +446,7 @@ function DotObject({
         {EDGES.map((_, i) => (
           <mesh key={`edge-${i}`} ref={(el) => void (edges.current[i] = el)} visible={false}>
             <boxGeometry args={[1, 1, 1]} />
-            <meshBasicMaterial color={BLUE} />
+            <meshBasicMaterial color={BLUE} transparent />
           </mesh>
         ))}
       </group>

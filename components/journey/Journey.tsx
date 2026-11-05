@@ -7,10 +7,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import "lenis/dist/lenis.css";
 import type { Quadrant, SiteContent } from "@/content/site";
+import { Drawing } from "./Drawings";
 import {
+  BEYOND,
   BUILT_UNTIL,
   JOURNEY_VH,
   SCENES,
+  beyondSlot,
   buildStops,
   counterT,
   curveYDesktop,
@@ -102,6 +105,7 @@ export function Journey({ content, today }: Props) {
       buildCurveScene(tl, counters, markerTs, rollEls, content.roles.length - 1);
       buildPlaneScene(tl, content.skills.quadrants);
       buildCubeScene(tl, content.projects.length);
+      buildBeyondScene(tl, content.beyond.drawings.length);
       // The timeline spans exactly the built part of the journey.
       tl.set({}, {}, BUILT_UNTIL);
     }, root);
@@ -124,6 +128,7 @@ export function Journey({ content, today }: Props) {
     content.education.length,
     content.skills.quadrants,
     content.projects.length,
+    content.beyond.drawings.length,
   ]);
 
   // Project card: a modal dialog. The page holds still while it is open.
@@ -144,6 +149,26 @@ export function Journey({ content, today }: Props) {
   }, [openProject]);
 
   const words = content.quote.text.split(" ");
+  const orbitSlot = Math.max(
+    0,
+    content.beyond.drawings.findIndex((d) => d.id === "orbit"),
+  );
+  const photoStyle = {
+    "--photo-d": `${BEYOND.desktop.photoW}px`,
+    "--photo-p": `${BEYOND.phone.photoW}px`,
+    "--pcx-d": BEYOND.desktop.cx,
+    "--pcy-d": BEYOND.desktop.cy,
+    "--pcx-p": BEYOND.phone.cx,
+    "--pcy-p": BEYOND.phone.cy,
+    "--slot-d": `${BEYOND.desktop.slot}px`,
+    "--slot-p": `${BEYOND.phone.slot}px`,
+  } as CSSProperties;
+  const slotStyle = (i: number) => {
+    const n = content.beyond.drawings.length;
+    const d = beyondSlot(i, n, BEYOND.desktop);
+    const p = beyondSlot(i, n, BEYOND.phone);
+    return { "--sx-d": d.x, "--sy-d": d.y, "--sx-p": p.x, "--sy-p": p.y } as CSSProperties;
+  };
   const journeyStyle = {
     "--len-desktop": `${JOURNEY_VH.desktop * BUILT_UNTIL}vh`,
     "--len-phone": `${JOURNEY_VH.phone * BUILT_UNTIL}vh`,
@@ -159,6 +184,8 @@ export function Journey({ content, today }: Props) {
           markerTs={markerTs}
           projectCount={content.projects.length}
           anchors={anchors}
+          restSlot={orbitSlot}
+          slotCount={content.beyond.drawings.length}
           onReady={() => setCanvasReady(true)}
         />
       )}
@@ -352,6 +379,25 @@ export function Journey({ content, today }: Props) {
             <p className="projects-hint" aria-hidden>
               {content.ui.projectsHint}
             </p>
+          </section>
+
+          {/* Scene 5 — beyond work */}
+          <section className="scene scene-beyond" data-scene="beyond" aria-labelledby="beyond" style={photoStyle}>
+            <h2 id="beyond" className="scene-title">
+              {content.ui.beyond}
+            </h2>
+            {/* Placeholder: Mario adds his photo here later. */}
+            <div className="photo" data-photo aria-hidden>
+              <span>{content.ui.photoPlaceholder}</span>
+            </div>
+            <ul className="drawings">
+              {content.beyond.drawings.map((d, i) => (
+                <li key={d.id} className="drawing" data-drawing={i} style={slotStyle(i)}>
+                  <Drawing id={d.id} />
+                  <span className="drawing-caption">{d.caption}</span>
+                </li>
+              ))}
+            </ul>
           </section>
         </div>
       </main>
@@ -636,4 +682,38 @@ function buildCubeScene(tl: gsap.core.Timeline, projectCount: number) {
   if (projectCount > 0) tl.to(motionState.act[projectCount - 1], { v: 0, duration: 0.004 }, hintAt - 0.004);
   tl.to(motionState, { dotPath: projectCount + 1, duration: 0.008, ease: "power1.inOut" }, hintAt - 0.004);
   tl.fromTo(".projects-hint", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.006 }, hintAt + 0.002);
+}
+
+/**
+ * Scene 5 (75–88%): the names leave, the cube's edges fly apart and fade, and the dot
+ * settles where the orbit drawing will be. The photo placeholder appears, then each line
+ * drawing draws itself in, clockwise from the top, and its caption follows.
+ */
+function buildBeyondScene(tl: gsap.core.Timeline, drawingCount: number) {
+  const { start, end } = SCENES.beyond;
+
+  // Clear scene 4.
+  tl.to([".project-label", ".projects-hint"], { autoAlpha: 0, duration: 0.005 }, start);
+  tl.to([...motionState.lit], { v: 0, duration: 0.005 }, start + 0.001);
+
+  // The cube breaks apart; the dot goes to its place in the orbit.
+  tl.to(motionState, { shatter: 1, duration: 0.016, ease: "power2.in" }, start + 0.004);
+  tl.to(motionState, { dotRest: 1, dotR: 7, duration: 0.014 }, start + 0.016);
+
+  tl.fromTo("[data-photo]", { autoAlpha: 0, scale: 0.96 }, { autoAlpha: 1, scale: 1, duration: 0.008 }, start + 0.03);
+
+  const first = start + 0.04;
+  const D = (end - 0.004 - first) / Math.max(drawingCount, 1);
+  for (let i = 0; i < drawingCount; i++) {
+    const s = first + i * D;
+    const sel = `[data-drawing="${i}"]`;
+    tl.set(`${sel} .drawing-art`, { autoAlpha: 1 }, s);
+    tl.fromTo(
+      `${sel} .stroke`,
+      { strokeDashoffset: 1 },
+      { strokeDashoffset: 0, duration: 0.5 * D, ease: "power1.inOut", stagger: { amount: 0.25 * D } },
+      s,
+    );
+    tl.fromTo(`${sel} .drawing-caption`, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 * D }, s + 0.72 * D);
+  }
 }

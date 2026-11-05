@@ -53,6 +53,10 @@ export const motionState = {
   act: [] as Level[],
   /** The project whose card is open (brown), or -1. Set by clicks, not by scroll. */
   selected: -1,
+  /** Scene 5: the cube's edges fly apart and fade (0 → 1). */
+  shatter: 0,
+  /** Scene 5: the dot leaves the cube for the center of the orbit drawing (0 → 1). */
+  dotRest: 0,
 };
 
 export const INITIAL_DOT_R = 8;
@@ -81,4 +85,6 @@ export function resetMotionState(roleCount: number, eduCount: number, markerCoun
   motionState.lit = Array.from({ length: projectCount }, () => ({ v: 0 }));
   motionState.act = Array.from({ length: projectCount }, () => ({ v: 0 }));
   motionState.selected = -1;
+  motionState.shatter = 0;
+  motionState.dotRest = 0;
 }

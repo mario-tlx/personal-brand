@@ -566,6 +566,71 @@ body {
   }
 }
 
+/* Beyond work: the photo and the five drawings */
+.scene-beyond {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.photo {
+  display: grid;
+  place-items: center;
+  width: 180px;
+  aspect-ratio: 3 / 4;
+  border: 1px dashed var(--color-quiet);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+}
+
+.drawings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px 32px;
+}
+
+.drawing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawing-art {
+  width: 96px;
+  height: 96px;
+  overflow: visible;
+}
+
+.drawing-art .stroke {
+  fill: none;
+  stroke: var(--color-blue);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.orbit-center {
+  fill: var(--color-blue);
+}
+
+.motion .orbit-center {
+  display: none;
+}
+
+.drawing-caption {
+  font-size: 0.82rem;
+  color: rgb(236 230 218 / 0.8);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -994,6 +1059,53 @@ body {
   visibility: hidden;
 }
 
+/* Scene 5: photo in the middle, drawings on a ring (positions come from BEYOND in
+   lib/journey.ts through the --pcx/--pcy/--sx/--sy variables). */
+.motion .photo {
+  position: absolute;
+  width: var(--photo-d);
+  left: calc(var(--pcx-d) * 100% - var(--photo-d) / 2);
+  top: calc(var(--pcy-d) * 100% - var(--photo-d) * 2 / 3);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .drawings {
+  display: block;
+}
+
+.motion .drawing {
+  position: absolute;
+  width: var(--slot-d);
+  height: var(--slot-d);
+  left: calc(var(--sx-d) * 100% - var(--slot-d) / 2);
+  top: calc(var(--sy-d) * 100% - var(--slot-d) / 2);
+  display: block;
+}
+
+.motion .drawing-art {
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+}
+
+.motion .drawing-art .stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.motion .drawing-caption {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  width: max-content;
+  max-width: 12rem;
+  transform: translateX(-50%);
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+}
+
 @media (max-width: 767px) {
   .motion .quote {
     bottom: calc(50% + 36px);
@@ -1154,5 +1266,24 @@ body {
     text-align: left;
     background: rgb(14 20 32 / 0.85);
     border: 1px solid var(--color-grid);
+  }
+
+  .motion .photo {
+    width: var(--photo-p);
+    left: calc(var(--pcx-p) * 100% - var(--photo-p) / 2);
+    top: calc(var(--pcy-p) * 100% - var(--photo-p) * 2 / 3);
+  }
+
+  .motion .drawing {
+    width: var(--slot-p);
+    height: var(--slot-p);
+    left: calc(var(--sx-p) * 100% - var(--slot-p) / 2);
+    top: calc(var(--sy-p) * 100% - var(--slot-p) / 2);
+  }
+
+  .motion .drawing-caption {
+    top: calc(100% + 4px);
+    max-width: 7rem;
+    font-size: 0.72rem;
   }
 }

@@ -14,7 +14,7 @@ export const SCENES = {
 } as const;
 
 /** Scenes built so far end here; the page's scroll length covers only this part. */
-export const BUILT_UNTIL = SCENES.cube.end;
+export const BUILT_UNTIL = SCENES.beyond.end;
 
 /** Scroll length of the whole journey (0 → 1), in viewport heights. Phone is shorter. */
 export const JOURNEY_VH = { desktop: 2400, phone: 1800 };
@@ -78,6 +78,22 @@ export const CUBE = {
     [0.2, -0.25, 0.8],
   ] as [number, number, number][],
 } as const;
+
+/**
+ * Scene 5: the photo in the middle, the line drawings on a ring around it (clockwise from
+ * the top). Centers and radii are fractions of the viewport; sizes are pixels. The page
+ * reads these through CSS variables, so there is nothing to keep in sync by hand.
+ */
+export const BEYOND = {
+  desktop: { cx: 0.5, cy: 0.52, rx: 0.33, ry: 0.33, photoW: 210, slot: 120 },
+  phone: { cx: 0.5, cy: 0.5, rx: 0.36, ry: 0.32, photoW: 140, slot: 80 },
+} as const;
+
+/** Center of drawing slot i of n, as viewport fractions. */
+export function beyondSlot(i: number, n: number, layout: { cx: number; cy: number; rx: number; ry: number }) {
+  const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+  return { x: layout.cx + layout.rx * Math.cos(a), y: layout.cy + layout.ry * Math.sin(a) };
+}
 
 /** 0 → 1 rise of the chart line at t (0 = left end, 1 = right end). */
 export function growth(t: number) {
