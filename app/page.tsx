@@ -1,15 +1,8 @@
-import { Hero } from "@/components/hero";
-import { About } from "@/components/about";
-import { Work } from "@/components/work";
-import { Contact } from "@/components/contact";
+import { site } from "@/content/site";
+import { Journey } from "@/components/journey/Journey";
+import { currentYear } from "@/lib/journey";
 
 export default function HomePage() {
-  return (
-    <>
-      <Hero />
-      <About />
-      <Work />
-      <Contact />
-    </>
-  );
+  // Evaluated when the static page is built: "today" on the time axis.
+  return <Journey content={site.en} today={currentYear()} />;
 }

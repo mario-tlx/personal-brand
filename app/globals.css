@@ -1,47 +1,1403 @@
 @import "tailwindcss";
 
-@theme inline {
-  --color-background: #050816;
-  --color-foreground: #f8fafc;
-  --color-muted: #94a3b8;
-  --color-accent: #38bdf8;
-  --color-accent-soft: rgba(56, 189, 248, 0.12);
-  --color-card: rgba(15, 23, 42, 0.72);
-  --color-border: rgba(148, 163, 184, 0.18);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  --color-navy: #0e1420;
+  --color-blue: #4fa3d9;
+  --color-brown: #c08a4e;
+  --color-ink: #ece6da;
+  --color-quiet: #6b7a90;
+  --color-grid: #1f2937;
+  --font-serif: var(--font-garamond), Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+/* ---------------------------------------------------------------------------
+   Base: the plain, readable page (no JavaScript, or prefers-reduced-motion).
+   Each scene is a still frame of its final state.
+   --------------------------------------------------------------------------- */
 
 html {
   color-scheme: dark;
+  background: var(--color-navy);
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  margin: 0;
+  background: var(--color-navy);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: rgba(56, 189, 248, 0.35);
-  color: white;
+  background: rgb(79 163 217 / 0.35);
+  color: var(--color-ink);
 }
 
-.section-shell {
-  @apply mx-auto w-full max-w-6xl px-6 py-20 md:px-8 md:py-28;
+.grid-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, var(--color-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: center center;
+  opacity: 0.45;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
 }
 
-.glass-card {
-  @apply rounded-3xl border border-border bg-card backdrop-blur-xl;
+.stage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100svh;
+  z-index: 1;
+  pointer-events: none;
 }
 
-.text-gradient {
-  background: linear-gradient(135deg, #ffffff 0%, #38bdf8 55%, #a855f7 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.journey {
+  position: relative;
+  z-index: 2;
+}
+
+.scene {
+  min-height: 100svh;
+  padding: 12svh 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  text-align: center;
+}
+
+.quote {
+  margin: 0;
+  max-width: 46rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: clamp(1.55rem, 3.4vw, 2.6rem);
+  line-height: 1.3;
+  color: var(--color-ink);
+}
+
+.quote p {
+  margin: 0;
+  text-wrap: balance;
+}
+
+.quote footer {
+  margin-top: 0.9rem;
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+}
+
+.word {
+  display: inline-block;
+}
+
+.dot-fallback {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-blue);
+  box-shadow: 0 0 24px rgb(79 163 217 / 0.45);
+}
+
+.ident h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(1.9rem, 3vw, 2.4rem);
+  letter-spacing: 0.01em;
+}
+
+.tagline {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+}
+
+.scroll-cue {
+  display: none;
+}
+
+/* Career, as a vertical timeline */
+.scene-line {
+  align-items: stretch;
+  text-align: left;
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.scene-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.8rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+}
+
+.axis-labels {
+  display: none;
+}
+
+.roles,
+.edu {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 28px;
+  border-left: 2px solid var(--color-blue);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.roles > li,
+.edu > li {
+  position: relative;
+}
+
+.roles > li::before,
+.edu > li::before {
+  content: "";
+  position: absolute;
+  left: -36px;
+  top: 0.45em;
+  width: 14px;
+  height: 2px;
+  background: var(--color-blue);
+}
+
+.edu {
+  border-left-color: var(--color-brown);
+}
+
+.edu > li::before {
+  left: -34px;
+  top: 0.35em;
+  width: 9px;
+  height: 9px;
+  background: var(--color-brown);
+  transform: rotate(45deg);
+}
+
+.role-dates {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--color-quiet);
+}
+
+.role-title {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  line-height: 1.25;
+}
+
+.role-org {
+  color: var(--color-blue);
+}
+
+.role-line {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgb(236 230 218 / 0.82);
+}
+
+.edu-degree {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-brown);
+}
+
+.edu-short {
+  display: none;
+}
+
+.edu-school {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.9rem;
+  color: var(--color-quiet);
+}
+
+/* Navbar: sticky in the plain page; fixed and scroll-revealed in motion mode. */
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 24px;
+  background: rgb(14 20 32 / 0.62);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  border-bottom: 1px solid rgb(31 41 55 / 0.7);
+}
+
+.site-nav-name {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.site-nav-name:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* In numbers, as a simple grid */
+.scene-curve {
+  align-items: stretch;
+  text-align: left;
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.leaders {
+  display: none;
+}
+
+.numbers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 28px 24px;
+}
+
+.number-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  line-height: 1.15;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.number-then {
+  display: inline-block;
+  color: var(--color-brown);
+}
+
+.number-label {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: rgb(236 230 218 / 0.72);
+}
+
+/* Skills, as a 2 × 2 grid laid out like the plane */
+.scene-plane {
+  align-items: stretch;
+  text-align: left;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.plane-labels {
+  display: none;
+}
+
+.quadrants {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.quadrant[data-qx="0"] {
+  grid-column: 1;
+}
+
+.quadrant[data-qx="1"] {
+  grid-column: 2;
+}
+
+.quadrant[data-qy="1"] {
+  grid-row: 1;
+}
+
+.quadrant[data-qy="0"] {
+  grid-row: 2;
+}
+
+@media (max-width: 639px) {
+  .quadrants {
+    grid-template-columns: 1fr;
+  }
+
+  .quadrant[data-qx] {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+.quadrant {
+  box-sizing: border-box;
+  padding: 18px 20px;
+  border: 1px solid var(--color-grid);
+  border-radius: 4px;
+}
+
+.quadrant.is-highlight {
+  border-color: var(--color-brown);
+  background: rgb(192 138 78 / 0.12);
+}
+
+.quadrant-title {
+  margin: 0 0 0.7rem;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 1.25rem;
+  color: var(--color-ink);
+}
+
+.is-highlight .quadrant-title {
+  color: var(--color-brown);
+}
+
+.skills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.skill {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.skill-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-blue);
+  transform: translateY(-1px);
+}
+
+.is-highlight .skill-dot {
+  background: var(--color-brown);
+}
+
+.skill-text {
+  color: rgb(236 230 218 / 0.82);
+  transition: color 0.2s ease;
+}
+
+.skill:hover .skill-text {
+  color: var(--color-ink);
+}
+
+/* Projects, as a list of cards */
+.scene-cube {
+  align-items: stretch;
+  text-align: left;
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.projects {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 16px;
+}
+
+.project {
+  padding: 18px 20px;
+  border: 1px solid var(--color-grid);
+  border-radius: 4px;
+}
+
+.project-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+.project-line {
+  margin: 0.5rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: rgb(236 230 218 / 0.82);
+}
+
+.project-link {
+  display: inline-block;
+  margin-top: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--color-blue);
+  text-decoration: none;
+  border-bottom: 1px solid rgb(79 163 217 / 0.4);
+}
+
+.project-link:hover,
+.project-link:focus-visible {
+  border-bottom-color: var(--color-blue);
+}
+
+.projects-hint {
+  display: none;
+}
+
+.project-dialog {
+  box-sizing: border-box;
+  width: min(380px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  margin: auto 24px auto auto;
+  padding: 0;
+  border: 1px solid var(--color-grid);
+  border-top: 2px solid var(--color-brown);
+  border-radius: 4px;
+  background: rgb(14 20 32 / 0.96);
+  color: var(--color-ink);
+}
+
+.project-dialog::backdrop {
+  background: rgb(14 20 32 / 0.45);
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 24px 24px 22px;
+}
+
+.project-kicker {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-brown);
+}
+
+.project-card-title {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+.project-card-line {
+  margin: 0.8rem 0 0;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: rgb(236 230 218 / 0.86);
+}
+
+.project-close {
+  margin-top: 1.4rem;
+  padding: 8px 14px;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  background: transparent;
+  border: 1px solid var(--color-quiet);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.project-close:hover,
+.project-close:focus-visible {
+  border-color: var(--color-ink);
+}
+
+@media (max-width: 767px) {
+  /* Phone: the card opens full screen. */
+  .project-dialog {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-top: 2px solid var(--color-brown);
+    border-radius: 0;
+  }
+
+  .project-card {
+    min-height: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    padding: 32px 24px;
+  }
+}
+
+/* Beyond work: the photo and the five drawings */
+.scene-beyond {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.photo {
+  display: grid;
+  place-items: center;
+  width: 180px;
+  aspect-ratio: 3 / 4;
+  border: 1px dashed var(--color-quiet);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+}
+
+.drawings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px 32px;
+}
+
+.drawing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawing-art {
+  width: 96px;
+  height: 96px;
+  overflow: visible;
+}
+
+.drawing-art .stroke {
+  fill: none;
+  stroke: var(--color-blue);
+  /* In drawing units (the box is 100 wide); no non-scaling-stroke, which breaks the
+     pathLength-based draw-in in Chrome. */
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.orbit-center {
+  fill: var(--color-blue);
+}
+
+.motion .orbit-center {
+  display: none;
+}
+
+.drawing-caption {
+  font-size: 0.82rem;
+  color: rgb(236 230 218 / 0.8);
+}
+
+/* Back to a dot: the closing line and the contact links */
+.scene-back {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  gap: 28px;
+}
+
+.scene-back .scene-title {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+.closing-dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-blue);
+  box-shadow: 0 0 24px rgb(79 163 217 / 0.45);
+}
+
+.contact {
+  text-align: left;
+}
+
+.closing {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.closing-word {
+  display: inline-block;
+}
+
+.contact-links {
+  list-style: none;
+  margin: 1.2rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+
+.contact-links a {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  color: var(--color-blue);
+  text-decoration: none;
+  border-bottom: 1px solid rgb(79 163 217 / 0.4);
+}
+
+.contact-links a:hover,
+.contact-links a:focus-visible {
+  border-bottom-color: var(--color-blue);
+  outline: none;
+}
+
+.contact-links a:focus-visible {
+  box-shadow: 0 0 0 2px rgb(79 163 217 / 0.35);
+}
+
+@media (max-width: 767px) {
+  .scene-back {
+    grid-template-columns: auto;
+    justify-items: center;
+  }
+
+  .contact {
+    text-align: center;
+  }
+
+  .contact-links {
+    justify-content: center;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion: one pinned viewport; the master timeline scrubs everything inside it.
+   Initial states below are the frame at scroll = 0 (GSAP takes over after load).
+   --------------------------------------------------------------------------- */
+
+.motion .journey {
+  height: calc(100svh + var(--len-desktop));
+}
+
+@media (max-width: 767px) {
+  .motion .journey {
+    height: calc(100svh + var(--len-phone));
+  }
+}
+
+.motion .journey-viewport {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.motion .scene {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  padding: 0;
+  display: block;
+  max-width: none;
+  pointer-events: none;
+}
+
+.motion .scene :is(.quote, .ident, .role-card, .edu-label, .number, .quadrant-title, .skill, .project-label, .contact) {
+  pointer-events: auto;
+}
+
+/* Scene 0: quote above the dot, name below it */
+.motion .quote {
+  position: absolute;
+  left: 50%;
+  bottom: calc(50% + 44px);
+  width: min(46rem, calc(100% - 48px));
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.motion .word {
+  opacity: 0;
+}
+
+.motion .quote footer {
+  opacity: 0;
+}
+
+.motion .dot-fallback {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -8px 0 0 -8px;
+  transition: opacity 0.4s ease;
+}
+
+.motion .dot-fallback.is-hidden {
+  opacity: 0;
+}
+
+.motion .ident {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + 40px);
+  text-align: center;
+}
+
+.motion .ident-inner,
+.motion .scroll-cue-inner {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 1.2s ease,
+    transform 1.2s ease;
+}
+
+.motion .scroll-cue-inner {
+  transition-delay: 0.5s;
+}
+
+.motion .intro-shown .ident-inner,
+.motion .intro-shown .scroll-cue-inner {
+  opacity: 1;
+  transform: none;
+}
+
+.motion .scroll-cue {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+}
+
+.motion .scroll-cue-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+}
+
+.motion .scroll-cue-inner::after {
+  content: "";
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(var(--color-quiet), transparent);
+}
+
+.motion .site-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Scene 1: the time axis. axis layout — keep in sync with AXIS in lib/journey.ts
+   desktop: horizontal at y 50%, x from 10% to 90%
+   phone:   vertical at x 76px, y from 14% to 86% */
+.motion .scene-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.motion .axis-labels {
+  display: block;
+}
+
+.motion .axis-labels > span {
+  position: absolute;
+  top: 50%;
+  margin-top: -0.6em;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--color-quiet);
+  opacity: 0;
+}
+
+.motion .axis-start {
+  right: calc(90% + 14px);
+}
+
+.motion .axis-end {
+  left: calc(90% + 14px);
+}
+
+.motion .roles,
+.motion .edu {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+
+.motion .roles > li::before,
+.motion .edu > li::before {
+  display: none;
+}
+
+.motion .role {
+  position: absolute;
+  width: min(320px, 40%);
+  left: clamp(16px, calc(10% + var(--f) * 80% - 160px), calc(100% - min(320px, 40%) - 16px));
+  bottom: calc(50% + 30px);
+}
+
+.motion .role-card {
+  padding: 14px 16px 15px;
+  border: 1px solid var(--color-grid);
+  border-radius: 4px;
+  background: rgb(14 20 32 / 0.88);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .role-title {
+  font-size: 1.2rem;
+}
+
+.motion .edu > li {
+  position: absolute;
+  top: calc(50% + 18px);
+  left: calc(10% + var(--f) * 80%);
+  width: 15rem;
+  margin-left: -7.5rem;
+  text-align: center;
+}
+
+.motion .edu-label {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .edu-school {
+  font-size: 0.8rem;
+}
+
+.motion .edu-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* Scene 2: the curve. Columns sit over their markers (x = 10% + t × 80%, as the axis);
+   dashed leaders drop to the curve at --my (from CURVE in lib/journey.ts). */
+.motion .leaders {
+  display: block;
+}
+
+.motion .leader {
+  position: absolute;
+  left: calc(10% + var(--t) * 80%);
+  top: 31%;
+  height: calc((var(--my) - 0.31) * 100% - 12px);
+  width: 1px;
+  background: repeating-linear-gradient(to bottom, var(--color-quiet) 0 3px, transparent 3px 7px);
+  opacity: 0;
+}
+
+.motion .numbers {
+  display: block;
+}
+
+.motion .number {
+  position: absolute;
+  top: 13%;
+  left: calc(10% + var(--t) * 80%);
+  width: 15%;
+  margin-left: -7.5%;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .number-value {
+  font-size: clamp(1.3rem, 2.2vw, 2.1rem);
+}
+
+.motion .number-then {
+  display: block;
+  font-size: 0.7em;
+  margin-top: 0.15em;
+}
+
+.motion .number-label {
+  font-size: 0.8rem;
+}
+
+/* Scene 3: the plane. plane layout — keep in sync with PLANE in lib/journey.ts
+   desktop: x from 10% to 90%, y from 15% (top) to 86% (x-axis)
+   phone:   x from 30px to 100% - 12px, y from 12% to 90% */
+.motion .scene-plane {
+  --px0: 10%;
+  --px1: 90%;
+  --pyt: 15%;
+  --pyb: 86%;
+}
+
+.motion .quadrants {
+  display: block;
+}
+
+.motion .quadrant {
+  position: absolute;
+  left: calc(var(--px0) + var(--qx) * (var(--px1) - var(--px0)) / 2);
+  top: calc(var(--pyt) + (1 - var(--qy)) * (var(--pyb) - var(--pyt)) / 2);
+  width: calc((var(--px1) - var(--px0)) / 2);
+  height: calc((var(--pyb) - var(--pyt)) / 2);
+  padding: clamp(14px, 3.2vh, 28px) clamp(16px, 2.4vw, 32px);
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.motion .quadrant.is-highlight {
+  border-color: transparent;
+  background: transparent;
+}
+
+.motion .is-highlight .quadrant-title {
+  color: var(--color-ink);
+}
+
+.motion .is-highlight .skill-dot {
+  background: var(--color-blue);
+}
+
+.motion .quadrant-title,
+.motion .skill-dot,
+.motion .skill-text,
+.motion .plane-labels > span {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .plane-labels {
+  display: block;
+}
+
+.motion .plane-labels > span {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+  white-space: nowrap;
+}
+
+.motion .plane-x {
+  right: calc(100% - var(--px1));
+  top: calc(var(--pyb) + 12px);
+}
+
+.motion .plane-y {
+  left: calc(var(--px0) - 26px);
+  top: var(--pyt);
+  transform-origin: 0 0;
+  transform: rotate(-90deg) translateX(-100%);
+}
+
+/* Scene 4: the cube. The canvas moves each .project-anchor onto its point every frame. */
+.motion .projects {
+  display: block;
+}
+
+.motion .project {
+  padding: 0;
+  border: 0;
+}
+
+.motion .project-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.motion .project-line,
+.motion .project .project-link {
+  display: none;
+}
+
+.motion .project-label {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  width: max-content;
+  max-width: 15rem;
+  margin-top: -0.75em;
+  padding: 2px 6px;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  line-height: 1.25;
+  text-align: left;
+  color: var(--color-ink);
+  background: rgb(14 20 32 / 0.6);
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .project-anchor[data-side="left"] .project-label {
+  left: auto;
+  right: 14px;
+  text-align: right;
+}
+
+.motion .project-label:hover,
+.motion .project-label:focus-visible {
+  color: var(--color-brown);
+  outline: none;
+}
+
+.motion .project-label:focus-visible {
+  box-shadow: 0 0 0 1px var(--color-brown);
+}
+
+.motion .projects-hint {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-quiet);
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Scene 5: photo in the middle, drawings on a ring (positions come from BEYOND in
+   lib/journey.ts through the --pcx/--pcy/--sx/--sy variables). */
+.motion .photo {
+  position: absolute;
+  width: var(--photo-d);
+  left: calc(var(--pcx-d) * 100% - var(--photo-d) / 2);
+  top: calc(var(--pcy-d) * 100% - var(--photo-d) * 2 / 3);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .drawings {
+  display: block;
+}
+
+.motion .drawing {
+  position: absolute;
+  width: var(--slot-d);
+  height: var(--slot-d);
+  left: calc(var(--sx-d) * 100% - var(--slot-d) / 2);
+  top: calc(var(--sy-d) * 100% - var(--slot-d) / 2);
+  display: block;
+}
+
+.motion .drawing-art {
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+}
+
+.motion .drawing-art .stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.motion .drawing-caption {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  width: max-content;
+  max-width: 12rem;
+  transform: translateX(-50%);
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Scene 6: the card sits to the right of the dot's resting place (CLOSING in lib/journey.ts). */
+.motion .closing-dot {
+  display: none;
+}
+
+.motion .contact {
+  position: absolute;
+  left: calc(var(--cx-d) * 100% + 44px);
+  top: calc(var(--cy-d) * 100%);
+  width: min(34rem, calc(100% - var(--cx-d) * 100% - 88px));
+  transform: translateY(-50%);
+  opacity: 0;
+  visibility: hidden;
+}
+
+.motion .closing-word,
+.motion .contact-links li {
+  opacity: 0;
+  visibility: hidden;
+}
+
+@media (max-width: 767px) {
+  .motion .quote {
+    bottom: calc(50% + 36px);
+  }
+
+  .motion .ident {
+    top: calc(50% + 32px);
+  }
+
+  .motion .axis-labels > span {
+    top: auto;
+    margin-top: 0;
+    right: auto;
+    left: 76px;
+    transform: translateX(-50%);
+  }
+
+  .motion .axis-labels > .axis-start {
+    top: calc(14% - 30px);
+  }
+
+  .motion .axis-labels > .axis-end {
+    top: calc(86% + 12px);
+  }
+
+  .motion .role {
+    width: auto;
+    left: 100px;
+    right: 16px;
+    bottom: auto;
+    top: clamp(13%, calc(14% + var(--f) * 72%), 80%);
+    transform: translateY(-50%);
+  }
+
+  .motion .edu > li {
+    top: calc(14% + var(--f) * 72%);
+    left: 8px;
+    width: 52px;
+    margin-left: 0;
+    transform: translateY(-50%);
+    text-align: right;
+  }
+
+  .motion .edu-degree,
+  .motion .edu-school {
+    display: none;
+  }
+
+  .motion .edu-short {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    line-height: 1.3;
+    color: var(--color-brown);
+  }
+
+  .motion .leaders {
+    display: none;
+  }
+
+  .motion .numbers {
+    position: absolute;
+    top: calc(56px + 3svh);
+    left: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 2svh;
+  }
+
+  .motion .number {
+    position: static;
+    width: auto;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 6.6rem 1fr;
+    column-gap: 14px;
+    align-items: baseline;
+    text-align: left;
+  }
+
+  .motion .number-value {
+    font-size: 1.2rem;
+  }
+
+  .motion .number-label {
+    margin-top: 0;
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .motion .scene-plane {
+    --px0: 30px;
+    --px1: calc(100% - 12px);
+    --pyt: 12%;
+    --pyb: 90%;
+  }
+
+  .motion .quadrant {
+    padding: 12px 10px 10px 12px;
+  }
+
+  .motion .quadrant-title {
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+
+  .motion .skills {
+    gap: 0.35rem;
+  }
+
+  .motion .skill {
+    gap: 7px;
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .motion .skill-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  .motion .plane-labels > span {
+    font-size: 0.62rem;
+  }
+
+  .motion .plane-y {
+    left: 8px;
+  }
+
+  /* Phone: names as a list below the cube (points are too close together to label). */
+  .motion .projects {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .motion .project-anchor {
+    position: static;
+    width: auto;
+    height: auto;
+    transform: none !important;
+  }
+
+  .motion .project-label,
+  .motion .project-anchor[data-side="left"] .project-label {
+    position: static;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 9px 12px;
+    font-size: 1rem;
+    text-align: left;
+    background: rgb(14 20 32 / 0.85);
+    border: 1px solid var(--color-grid);
+  }
+
+  .motion .photo {
+    width: var(--photo-p);
+    left: calc(var(--pcx-p) * 100% - var(--photo-p) / 2);
+    top: calc(var(--pcy-p) * 100% - var(--photo-p) * 2 / 3);
+  }
+
+  .motion .drawing {
+    width: var(--slot-p);
+    height: var(--slot-p);
+    left: calc(var(--sx-p) * 100% - var(--slot-p) / 2);
+    top: calc(var(--sy-p) * 100% - var(--slot-p) / 2);
+  }
+
+  .motion .drawing-caption {
+    top: calc(100% + 4px);
+    max-width: 7rem;
+    font-size: 0.72rem;
+  }
+
+  .motion .contact {
+    left: 24px;
+    right: 24px;
+    width: auto;
+    top: calc(var(--cy-p) * 100% + 44px);
+    transform: none;
+  }
 }
